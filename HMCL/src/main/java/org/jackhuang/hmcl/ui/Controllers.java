@@ -604,10 +604,11 @@ public final class Controllers {
     public static void onHyperlinkAction(String href) {
         if (href.startsWith("hmcl://")) {
             switch (href) {
-                case "hmcl://settings/feedback":
-                    Controllers.getSettingsPage().showFeedback();
-                    Controllers.navigate(Controllers.getSettingsPage());
-                    break;
+                // This only shows up in the nightly hint, just remove that and this shouldn't ever run
+                // case "hmcl://settings/feedback":
+                //     Controllers.getSettingsPage().showFeedback();
+                //     Controllers.navigate(Controllers.getSettingsPage());
+                //     break;
                 case "hmcl://game/launch":
                     Profile profile = Profiles.getSelectedProfile();
                     Versions.launch(profile, profile.getSelectedVersion(), LauncherHelper::setKeep);

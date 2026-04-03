@@ -268,10 +268,10 @@ public final class ModListPage extends ListPageBase<ModListPageSkin.ModInfoObjec
         }
     }
 
-    public void download() {
-        Controllers.getDownloadPage().showModDownloads().selectVersion(instanceId);
-        Controllers.navigate(Controllers.getDownloadPage());
-    }
+    // public void download() {
+    //     Controllers.getDownloadPage().showModDownloads().selectVersion(instanceId);
+    //     Controllers.navigate(Controllers.getDownloadPage());
+    // }
 
     public void rollback(LocalModFile from, LocalModFile to) {
         try {

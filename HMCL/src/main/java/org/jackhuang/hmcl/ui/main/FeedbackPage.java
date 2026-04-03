@@ -42,6 +42,7 @@ public class FeedbackPage extends SpinnerPane {
         FXUtils.smoothScrolling(scrollPane);
         setContent(scrollPane);
 
+        // AIUEO: Settings > Help > Feedback 
         ComponentList groups = new ComponentList();
         {
             var users = LineButton.createExternalLinkButton(Metadata.GROUPS_URL);

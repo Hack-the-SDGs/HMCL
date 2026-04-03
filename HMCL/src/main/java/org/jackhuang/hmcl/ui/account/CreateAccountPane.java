@@ -97,14 +97,14 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
         if (factory == null) {
             if (AccountListPage.RESTRICTED.get()) {
                 showMethodSwitcher = false;
-                factory = Accounts.FACTORY_MICROSOFT;
+                // factory = Accounts.FACTORY_MICROSOFT;
             } else {
                 showMethodSwitcher = true;
                 String preferred = config().getPreferredLoginType();
                 try {
                     factory = Accounts.getAccountFactory(preferred);
                 } catch (IllegalArgumentException e) {
-                    factory = Accounts.FACTORY_OFFLINE;
+                    // factory = Accounts.FACTORY_OFFLINE;
                 }
             }
         } else {
@@ -276,8 +276,8 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
             setActions(lblErrorMessage, actions);
         }
 
-        if (factory == Accounts.FACTORY_MICROSOFT) {
-            detailsPane = new MicrosoftAccountLoginPane(true);
+        if (false /* factory == Accounts.FACTORY_MICROSOFT */) {
+            // detailsPane = new MicrosoftAccountLoginPane(true);
             setActions();
         } else {
             detailsPane = new AccountDetailsInputPane(factory, btnAccept::fire);
@@ -337,14 +337,16 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
 
             int rowIndex = 0;
 
-            if (!IntegrityChecker.isOfficial() && !(factory instanceof OfflineAccountFactory)) {
-                HintPane hintPane = new HintPane(MessageDialogPane.MessageType.WARNING);
-                hintPane.setSegment(i18n("unofficial.hint"));
-                GridPane.setColumnSpan(hintPane, 2);
-                add(hintPane, 0, rowIndex);
-
-                rowIndex++;
-            }
+            // AIUEO: Disable warning about this being unofficial
+            // There isn't any sensitive data involved, this should be fine ~w~
+            // if (!IntegrityChecker.isOfficial() && !(factory instanceof OfflineAccountFactory)) {
+            //     HintPane hintPane = new HintPane(MessageDialogPane.MessageType.WARNING);
+            //     hintPane.setSegment(i18n("unofficial.hint"));
+            //     GridPane.setColumnSpan(hintPane, 2);
+            //     add(hintPane, 0, rowIndex);
+            //
+            //     rowIndex++;
+            // }
 
             if (factory instanceof BoundAuthlibInjectorAccountFactory) {
                 this.server = ((BoundAuthlibInjectorAccountFactory) factory).getServer();
