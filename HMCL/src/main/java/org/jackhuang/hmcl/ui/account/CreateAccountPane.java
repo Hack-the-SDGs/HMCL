@@ -303,7 +303,6 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
                 String value = links.get(key);
                 if (value != null) {
                     Hyperlink link = new Hyperlink(i18n("account.injector.link." + key));
-                    FXUtils.installSlowTooltip(link, value);
                     link.setOnAction(e -> FXUtils.openLink(value));
                     result.add(link);
                 }
@@ -349,32 +348,13 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
 
             if (factory instanceof BoundAuthlibInjectorAccountFactory) {
                 this.server = ((BoundAuthlibInjectorAccountFactory) factory).getServer();
-
-                Label lblServers = new Label(i18n("account.injector.server"));
-                setHalignment(lblServers, HPos.LEFT);
-                add(lblServers, 0, rowIndex);
-
-                Label lblServerName = new Label(this.server.getName());
-                lblServerName.setMaxWidth(Double.MAX_VALUE);
-                HBox.setHgrow(lblServerName, Priority.ALWAYS);
-
-                HBox linksContainer = new HBox();
-                linksContainer.setAlignment(Pos.CENTER);
-                linksContainer.getChildren().setAll(createHyperlinks(this.server));
-                linksContainer.setMinWidth(USE_PREF_SIZE);
-
-                HBox boxServers = new HBox(lblServerName, linksContainer);
-                boxServers.setAlignment(Pos.CENTER_LEFT);
-                add(boxServers, 1, rowIndex);
-
-                rowIndex++;
             } else if (factory instanceof AuthlibInjectorAccountFactory) {
                 Label lblServers = new Label(i18n("account.injector.server"));
                 setHalignment(lblServers, HPos.LEFT);
                 add(lblServers, 0, rowIndex);
 
                 cboServers = new JFXComboBox<>();
-                cboServers.setCellFactory(jfxListCellFactory(server -> new TwoLineListItem(server.getName(), server.getUrl())));
+                cboServers.setCellFactory(jfxListCellFactory(server -> new TwoLineListItem(server.getName(), "")));
                 cboServers.setConverter(stringConverter(AuthlibInjectorServer::getName));
                 bindContent(cboServers.getItems(), config().getAuthlibInjectorServers());
                 cboServers.getItems().addListener(onInvalidating(

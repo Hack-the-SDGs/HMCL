@@ -31,7 +31,6 @@ import org.jackhuang.hmcl.auth.Account;
 import org.jackhuang.hmcl.auth.AuthenticationException;
 import org.jackhuang.hmcl.auth.CredentialExpiredException;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorAccount;
-import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorServer;
 import org.jackhuang.hmcl.auth.offline.OfflineAccount;
 import org.jackhuang.hmcl.auth.yggdrasil.CompleteGameProfile;
 import org.jackhuang.hmcl.auth.yggdrasil.TextureType;
@@ -71,14 +70,7 @@ public class AccountListItem extends RadioButton {
 
         String loginTypeName = Accounts.getLocalizedLoginTypeName(Accounts.getAccountFactory(account));
         String portableSuffix = account.isPortable() ? ", " + i18n("account.portable") : "";
-        if (account instanceof AuthlibInjectorAccount) {
-            AuthlibInjectorServer server = ((AuthlibInjectorAccount) account).getServer();
-            subtitle.bind(Bindings.concat(
-                    loginTypeName, ", ", i18n("account.injector.server"), ": ",
-                    Bindings.createStringBinding(server::getName, server), portableSuffix));
-        } else {
-            subtitle.set(loginTypeName + portableSuffix);
-        }
+        subtitle.set(loginTypeName + portableSuffix);
 
         StringBinding characterName = Bindings.createStringBinding(account::getCharacter, account);
         if (account instanceof OfflineAccount) {

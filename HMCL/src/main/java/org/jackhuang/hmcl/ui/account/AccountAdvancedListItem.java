@@ -25,8 +25,6 @@ import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Tooltip;
 import org.jackhuang.hmcl.auth.Account;
-import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorAccount;
-import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorServer;
 import org.jackhuang.hmcl.auth.yggdrasil.YggdrasilAccount;
 import org.jackhuang.hmcl.game.TexturesLoader;
 import org.jackhuang.hmcl.setting.Accounts;
@@ -96,21 +94,11 @@ public class AccountAdvancedListItem extends AdvancedListItem {
     }
 
     private static ObservableValue<String> accountSubtitle(Account account) {
-        if (account instanceof AuthlibInjectorAccount) {
-            return BindingMapping.of(((AuthlibInjectorAccount) account).getServer(), AuthlibInjectorServer::getName);
-        } else {
-            return createStringBinding(() -> getLocalizedLoginTypeName(getAccountFactory(account)));
-        }
+        return createStringBinding(() -> getLocalizedLoginTypeName(getAccountFactory(account)));
     }
 
     private static ObservableValue<String> accountTooltip(Account account) {
-        if (account instanceof AuthlibInjectorAccount) {
-            AuthlibInjectorServer server = ((AuthlibInjectorAccount) account).getServer();
-            return Bindings.format("%s (%s) (%s)",
-                    BindingMapping.of(account, Account::getCharacter),
-                    account.getUsername(),
-                    BindingMapping.of(server, AuthlibInjectorServer::getName));
-        } else if (account instanceof YggdrasilAccount) {
+        if (account instanceof YggdrasilAccount) {
             return Bindings.format("%s (%s)",
                     BindingMapping.of(account, Account::getCharacter),
                     account.getUsername());
