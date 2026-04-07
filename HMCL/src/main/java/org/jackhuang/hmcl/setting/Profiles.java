@@ -25,6 +25,9 @@ import javafx.collections.ObservableList;
 import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.event.EventBus;
 import org.jackhuang.hmcl.event.RefreshedVersionsEvent;
+import org.jackhuang.hmcl.task.Task;
+import org.jackhuang.hmcl.ui.Controllers;
+import org.jackhuang.hmcl.util.TaskCancellationAction;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -43,6 +46,9 @@ public final class Profiles {
 
     public static final String DEFAULT_PROFILE = "Default";
     public static final String HOME_PROFILE = "Home";
+
+    private static final String[] AUTO_DOWNLOAD_VERSIONS = {"1.21.11", "1.18"};
+    private static boolean autoDownloadTriggered = false;
 
     private Profiles() {
     }
@@ -101,7 +107,7 @@ public final class Profiles {
 
     private static void checkProfiles() {
         if (profiles.isEmpty()) {
-            Profile current = new Profile(Profiles.DEFAULT_PROFILE, Path.of(".minecraft"), new VersionSetting(), "1.21.1", true);
+            Profile current = new Profile(Profiles.DEFAULT_PROFILE, Path.of(".minecraft"), new VersionSetting(), "1.21.11", true);
             Profile home = new Profile(Profiles.HOME_PROFILE, Metadata.MINECRAFT_DIRECTORY);
             Platform.runLater(() -> profiles.addAll(current, home));
         }
@@ -169,9 +175,33 @@ public final class Profiles {
                     selectedVersion.bind(profile.selectedVersionProperty());
                     for (Consumer<Profile> listener : versionsListeners)
                         listener.accept(profile);
+
+                    autoDownloadVersions(profile);
                 }
             });
         });
+    }
+
+    private static void autoDownloadVersions(Profile profile) {
+        if (autoDownloadTriggered) return;
+        autoDownloadTriggered = true;
+
+        Task<?> chain = null;
+        for (String version : AUTO_DOWNLOAD_VERSIONS) {
+            if (!profile.getRepository().hasVersion(version)) {
+                Task<?> downloadTask = profile.getDependency().gameBuilder()
+                        .name(version)
+                        .gameVersion(version)
+                        .buildAsync();
+                chain = chain == null ? downloadTask : chain.thenComposeAsync(v -> downloadTask);
+            }
+        }
+        if (chain != null) {
+            Controllers.taskDialog(
+                    chain.whenComplete(any -> profile.getRepository().refreshVersions()),
+                    i18n("install.new_game"),
+                    TaskCancellationAction.NORMAL);
+        }
     }
 
     public static ObservableList<Profile> getProfiles() {
