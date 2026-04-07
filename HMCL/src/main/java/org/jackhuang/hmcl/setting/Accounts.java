@@ -28,10 +28,7 @@ import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.auth.*;
 import org.jackhuang.hmcl.auth.authlibinjector.*;
 import org.jackhuang.hmcl.auth.microsoft.MicrosoftAccount;
-import org.jackhuang.hmcl.auth.microsoft.MicrosoftAccountFactory;
 import org.jackhuang.hmcl.auth.microsoft.MicrosoftService;
-import org.jackhuang.hmcl.auth.offline.OfflineAccount;
-import org.jackhuang.hmcl.auth.offline.OfflineAccountFactory;
 import org.jackhuang.hmcl.auth.yggdrasil.RemoteAuthenticationException;
 import org.jackhuang.hmcl.game.OAuthServer;
 import org.jackhuang.hmcl.task.Schedulers;
@@ -210,6 +207,7 @@ public final class Accounts {
             if (config().getAuthlibInjectorServers().stream().noneMatch(it -> ntust.getUrl().equals(it.getUrl()))) {
                 config().getAuthlibInjectorServers().add(0, ntust);
             }
+            config().setAddedLittleSkin(true);
         }
 
         loadGlobalAccountStorages();
