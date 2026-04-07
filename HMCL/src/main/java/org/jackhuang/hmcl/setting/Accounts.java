@@ -26,7 +26,6 @@ import javafx.collections.ObservableList;
 import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.auth.*;
 import org.jackhuang.hmcl.auth.authlibinjector.*;
-import org.jackhuang.hmcl.auth.microsoft.MicrosoftAccount;
 import org.jackhuang.hmcl.auth.microsoft.MicrosoftService;
 import org.jackhuang.hmcl.auth.yggdrasil.RemoteAuthenticationException;
 import org.jackhuang.hmcl.task.Schedulers;
@@ -445,8 +444,6 @@ public final class Accounts {
             return i18n("account.methods.microsoft.error.no_character");
         } else if (exception instanceof MicrosoftService.NoXuiException) {
             return i18n("account.methods.microsoft.error.add_family");
-        } else if (exception instanceof OAuthServer.MicrosoftAuthenticationNotSupportedException) {
-            return i18n("account.methods.microsoft.snapshot");
         } else if (exception instanceof OAuthAccount.WrongAccountException) {
             return i18n("account.failed.wrong_account");
         } else if (exception.getClass() == AuthenticationException.class) {
