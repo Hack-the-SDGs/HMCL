@@ -24,6 +24,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.download.DefaultDependencyManager;
+import org.jackhuang.hmcl.download.GameBuilder;
+import org.jackhuang.hmcl.download.RemoteVersion;
+import org.jackhuang.hmcl.download.VersionList;
 import org.jackhuang.hmcl.event.EventBus;
 import org.jackhuang.hmcl.event.RefreshedVersionsEvent;
 import org.jackhuang.hmcl.task.Task;
@@ -32,6 +35,7 @@ import org.jackhuang.hmcl.util.TaskCancellationAction;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.TreeMap;
@@ -185,11 +189,30 @@ public final class Profiles {
     private static void autoDownloadVersions(Profile profile) {
         DefaultDependencyManager dep = profile.getDependency();
         List<Task<?>> tasks = new ArrayList<>();
+
         for (String version : AUTO_DOWNLOAD_VERSIONS) {
-            if (!profile.getRepository().hasVersion(version)) {
+            if (profile.getRepository().hasVersion(version)) continue;
+
+            if (AUTO_DOWNLOAD_VERSIONS[0].equals(version)) {
+                // Install with Fabric + Fabric API (latest)
+                VersionList<?> fabricList = dep.getVersionList("fabric");
+                VersionList<?> fabricApiList = dep.getVersionList("fabric-api");
+                tasks.add(Task.allOf(
+                        fabricList.loadAsync(version),
+                        fabricApiList.loadAsync(version)
+                ).thenComposeAsync(() -> {
+                    GameBuilder builder = dep.gameBuilder().name(version).gameVersion(version);
+                    Collection<? extends RemoteVersion> fabricVersions = fabricList.getVersions(version);
+                    if (!fabricVersions.isEmpty()) builder.version(fabricVersions.iterator().next());
+                    Collection<? extends RemoteVersion> apiVersions = fabricApiList.getVersions(version);
+                    if (!apiVersions.isEmpty()) builder.version(apiVersions.iterator().next());
+                    return builder.buildAsync();
+                }));
+            } else {
                 tasks.add(dep.gameBuilder().name(version).gameVersion(version).buildAsync());
             }
         }
+
         if (!tasks.isEmpty()) {
             Controllers.taskDialog(
                     Task.allOf(tasks).whenComplete(any -> profile.getRepository().refreshVersions()),
