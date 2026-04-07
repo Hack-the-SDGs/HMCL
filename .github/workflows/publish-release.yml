@@ -36,6 +36,7 @@ jobs:
       - name: Prepare release assets
         id: assets
         run: |
+          set -euo pipefail
           cd HMCL/build/libs
 
           JAR=$(ls HMCL-*.jar | grep -v sources | head -1)
