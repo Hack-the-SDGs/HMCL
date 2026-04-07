@@ -52,7 +52,6 @@ import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.SVG;
 import org.jackhuang.hmcl.ui.construct.*;
-import org.jackhuang.hmcl.upgrade.IntegrityChecker;
 import org.jackhuang.hmcl.util.StringUtils;
 import org.jackhuang.hmcl.util.gson.UUIDTypeAdapter;
 import org.jackhuang.hmcl.util.javafx.BindingMapping;
@@ -104,7 +103,7 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
                 try {
                     factory = Accounts.getAccountFactory(preferred);
                 } catch (IllegalArgumentException e) {
-                    // factory = Accounts.FACTORY_OFFLINE;
+                    factory = Accounts.FACTORY_AUTHLIB_INJECTOR;
                 }
             }
         } else {
