@@ -22,7 +22,6 @@ import javafx.beans.Observable;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.auth.*;
@@ -47,7 +46,6 @@ import java.util.*;
 import static java.util.stream.Collectors.toList;
 import static javafx.collections.FXCollections.observableArrayList;
 import static org.jackhuang.hmcl.setting.ConfigHolder.config;
-import static org.jackhuang.hmcl.setting.ConfigHolder.globalConfig;
 import static org.jackhuang.hmcl.ui.FXUtils.onInvalidating;
 import static org.jackhuang.hmcl.util.Lang.immutableListOf;
 import static org.jackhuang.hmcl.util.Lang.mapOf;
@@ -255,30 +253,6 @@ public final class Accounts {
         if (selected == null && !accounts.isEmpty()) {
             selected = accounts.get(0);
         }
-
-        if (!globalConfig().isEnableOfflineAccount())
-            for (Account account : accounts) {
-                if (account instanceof MicrosoftAccount) {
-                    globalConfig().setEnableOfflineAccount(true);
-                    break;
-                }
-            }
-
-        if (!globalConfig().isEnableOfflineAccount())
-            accounts.addListener(new ListChangeListener<Account>() {
-                @Override
-                public void onChanged(Change<? extends Account> change) {
-                    while (change.next()) {
-                        for (Account account : change.getAddedSubList()) {
-                            if (account instanceof MicrosoftAccount) {
-                                accounts.removeListener(this);
-                                globalConfig().setEnableOfflineAccount(true);
-                                return;
-                            }
-                        }
-                    }
-                }
-            });
 
         selectedAccount.set(selected);
 
