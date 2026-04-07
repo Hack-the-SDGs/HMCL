@@ -96,7 +96,7 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
         if (factory == null) {
             if (AccountListPage.RESTRICTED.get()) {
                 showMethodSwitcher = false;
-                // factory = Accounts.FACTORY_MICROSOFT;
+                factory = Accounts.FACTORY_AUTHLIB_INJECTOR;
             } else {
                 showMethodSwitcher = true;
                 String preferred = config().getPreferredLoginType();
