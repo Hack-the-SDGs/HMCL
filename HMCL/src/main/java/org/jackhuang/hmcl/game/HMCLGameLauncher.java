@@ -35,7 +35,6 @@ import org.jackhuang.hmcl.util.versioning.GameVersionNumber;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Stream;
@@ -170,9 +169,7 @@ public final class HMCLGameLauncher extends DefaultLauncher {
 
         try {
             Files.createDirectories(runDir);
-            try (OutputStream os = Files.newOutputStream(serversDat)) {
-                NBTCodec.of().writeTag(os, root);
-            }
+            FileUtils.saveSafely(serversDat, os -> NBTCodec.of().writeTag(os, root));
         } catch (IOException e) {
             LOG.warning("Unable to generate servers.dat", e);
         }
