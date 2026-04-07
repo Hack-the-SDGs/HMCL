@@ -26,7 +26,6 @@ import javafx.collections.ObservableList;
 import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.auth.*;
 import org.jackhuang.hmcl.auth.authlibinjector.*;
-import org.jackhuang.hmcl.auth.microsoft.MicrosoftAccount;
 import org.jackhuang.hmcl.auth.microsoft.MicrosoftService;
 import org.jackhuang.hmcl.auth.yggdrasil.RemoteAuthenticationException;
 import org.jackhuang.hmcl.task.Schedulers;

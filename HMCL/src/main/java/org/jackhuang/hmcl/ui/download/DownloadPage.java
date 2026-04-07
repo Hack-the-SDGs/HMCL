@@ -44,7 +44,6 @@ import org.jackhuang.hmcl.ui.decorator.DecoratorPage;
 import org.jackhuang.hmcl.ui.versions.DownloadListPage;
 import org.jackhuang.hmcl.ui.versions.HMCLLocalizedDownloadListPage;
 import org.jackhuang.hmcl.ui.versions.VersionPage;
-import org.jackhuang.hmcl.ui.versions.Versions;
 import org.jackhuang.hmcl.ui.wizard.Navigation;
 import org.jackhuang.hmcl.ui.wizard.WizardController;
 import org.jackhuang.hmcl.ui.wizard.WizardProvider;
