@@ -17,6 +17,10 @@
  */
 package org.jackhuang.hmcl.game;
 
+import org.glavo.nbt.io.NBTCodec;
+import org.glavo.nbt.tag.CompoundTag;
+import org.glavo.nbt.tag.ListTag;
+import org.glavo.nbt.tag.TagType;
 import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.auth.AuthInfo;
 import org.jackhuang.hmcl.launch.DefaultLauncher;
@@ -31,6 +35,7 @@ import org.jackhuang.hmcl.util.versioning.GameVersionNumber;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Stream;
@@ -143,15 +148,47 @@ public final class HMCLGameLauncher extends DefaultLauncher {
         };
     }
 
+    private static final String[][] DEFAULT_SERVERS = {
+            {"Hack-the-SDGs", "mc.ntust.camp"},
+            {"Cybersecurity", "localhost"},
+    };
+
+    private void generateServersDat() {
+        Path runDir = repository.getRunDirectory(version.getId());
+        Path serversDat = runDir.resolve("servers.dat");
+
+        if (Files.exists(serversDat))
+            return;
+
+        ListTag<CompoundTag> serverList = new ListTag<>(TagType.COMPOUND);
+        for (String[] entry : DEFAULT_SERVERS) {
+            serverList.addTag(new CompoundTag()
+                    .addString("name", entry[0])
+                    .addString("ip", entry[1]));
+        }
+        CompoundTag root = new CompoundTag().addTag("servers", serverList);
+
+        try {
+            Files.createDirectories(runDir);
+            try (OutputStream os = Files.newOutputStream(serversDat)) {
+                NBTCodec.of().writeTag(os, root);
+            }
+        } catch (IOException e) {
+            LOG.warning("Unable to generate servers.dat", e);
+        }
+    }
+
     @Override
     public ManagedProcess launch() throws IOException, InterruptedException {
         generateOptionsTxt();
+        generateServersDat();
         return super.launch();
     }
 
     @Override
     public void makeLaunchScript(Path scriptFile) throws IOException {
         generateOptionsTxt();
+        generateServersDat();
         super.makeLaunchScript(scriptFile);
     }
 
