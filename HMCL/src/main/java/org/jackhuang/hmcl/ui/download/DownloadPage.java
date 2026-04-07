@@ -17,7 +17,6 @@
  */
 package org.jackhuang.hmcl.ui.download;
 
-import com.jfoenix.controls.JFXButton;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.Node;
@@ -71,8 +70,8 @@ public class DownloadPage extends DecoratorAnimatedPage implements DecoratorPage
     private final ReadOnlyObjectWrapper<DecoratorPage.State> state = new ReadOnlyObjectWrapper<>(DecoratorPage.State.fromTitle(i18n("download"), -1));
     private final TabHeader tab;
     private final TabHeader.Tab<VersionsPage> newGameTab = new TabHeader.Tab<>("newGameTab");
-    private final TabHeader.Tab<DownloadListPage> modTab = new TabHeader.Tab<>("modTab");
-    private final TabHeader.Tab<DownloadListPage> modpackTab = new TabHeader.Tab<>("modpackTab");
+    // private final TabHeader.Tab<DownloadListPage> modTab = new TabHeader.Tab<>("modTab");
+    // private final TabHeader.Tab<DownloadListPage> modpackTab = new TabHeader.Tab<>("modpackTab");
     private final TabHeader.Tab<DownloadListPage> resourcePackTab = new TabHeader.Tab<>("resourcePackTab");
     private final TabHeader.Tab<DownloadListPage> shaderTab = new TabHeader.Tab<>("shaderTab");
     private final TabHeader.Tab<DownloadListPage> worldTab = new TabHeader.Tab<>("worldTab");
@@ -88,22 +87,22 @@ public class DownloadPage extends DecoratorAnimatedPage implements DecoratorPage
     public DownloadPage(String uploadVersion) {
         newGameTab.setNodeSupplier(loadVersionFor(() -> new VersionsPage(versionPageNavigator, i18n("install.installer.choose", i18n("install.installer.game")), "", DownloadProviders.getDownloadProvider(),
                 "game", versionPageNavigator::onGameSelected)));
-        modpackTab.setNodeSupplier(loadVersionFor(() -> {
-            DownloadListPage page = HMCLLocalizedDownloadListPage.ofModPack((downloadProvider, profile, __, mod, file) -> {
-                Versions.downloadModpackImpl(downloadProvider, profile, uploadVersion, mod, file);
-            }, false);
-
-            JFXButton installLocalModpackButton = FXUtils.newRaisedButton(i18n("install.modpack"));
-            installLocalModpackButton.setOnAction(e -> Versions.importModpack());
-
-            page.getActions().add(installLocalModpackButton);
-            return page;
-        }));
-        modTab.setNodeSupplier(loadVersionFor(() -> HMCLLocalizedDownloadListPage.ofMod((downloadProvider, profile, version, mod, file) -> download(downloadProvider, profile, version, file, "mods"), true)));
+        // modpackTab.setNodeSupplier(loadVersionFor(() -> {
+        //     DownloadListPage page = HMCLLocalizedDownloadListPage.ofModPack((downloadProvider, profile, __, mod, file) -> {
+        //         Versions.downloadModpackImpl(downloadProvider, profile, uploadVersion, mod, file);
+        //     }, false);
+        //
+        //     JFXButton installLocalModpackButton = FXUtils.newRaisedButton(i18n("install.modpack"));
+        //     installLocalModpackButton.setOnAction(e -> Versions.importModpack());
+        //
+        //     page.getActions().add(installLocalModpackButton);
+        //     return page;
+        // }));
+        // modTab.setNodeSupplier(loadVersionFor(() -> HMCLLocalizedDownloadListPage.ofMod((downloadProvider, profile, version, mod, file) -> download(downloadProvider, profile, version, file, "mods"), true)));
         resourcePackTab.setNodeSupplier(loadVersionFor(() -> HMCLLocalizedDownloadListPage.ofResourcePack((downloadProvider, profile, version, mod, file) -> download(downloadProvider, profile, version, file, "resourcepacks"), true)));
         shaderTab.setNodeSupplier(loadVersionFor(() -> HMCLLocalizedDownloadListPage.ofShaderPack((downloadProvider, profile, version, mod, file) -> download(downloadProvider, profile, version, file, "shaderpacks"), true)));
         worldTab.setNodeSupplier(loadVersionFor(() -> new DownloadListPage(CurseForgeRemoteModRepository.WORLDS)));
-        tab = new TabHeader(transitionPane, newGameTab, modpackTab, modTab, resourcePackTab, shaderTab, worldTab);
+        tab = new TabHeader(transitionPane, newGameTab, /* modpackTab, modTab, */ resourcePackTab, shaderTab, worldTab);
 
         Profiles.registerVersionsListener(this::loadVersions);
 
@@ -112,9 +111,9 @@ public class DownloadPage extends DecoratorAnimatedPage implements DecoratorPage
         AdvancedListBox sideBar = new AdvancedListBox()
                 .startCategory(i18n("download.game").toUpperCase(Locale.ROOT))
                 .addNavigationDrawerTab(tab, newGameTab, i18n("game"), SVG.STADIA_CONTROLLER, SVG.STADIA_CONTROLLER_FILL)
-                .addNavigationDrawerTab(tab, modpackTab, i18n("modpack"), SVG.PACKAGE2, SVG.PACKAGE2_FILL)
+                // .addNavigationDrawerTab(tab, modpackTab, i18n("modpack"), SVG.PACKAGE2, SVG.PACKAGE2_FILL)
                 .startCategory(i18n("download.content").toUpperCase(Locale.ROOT))
-                .addNavigationDrawerTab(tab, modTab, i18n("mods"), SVG.EXTENSION, SVG.EXTENSION_FILL)
+                // .addNavigationDrawerTab(tab, modTab, i18n("mods"), SVG.EXTENSION, SVG.EXTENSION_FILL)
                 .addNavigationDrawerTab(tab, resourcePackTab, i18n("resourcepack"), SVG.TEXTURE)
                 .addNavigationDrawerTab(tab, shaderTab, i18n("download.shader"), SVG.WB_SUNNY, SVG.WB_SUNNY_FILL)
                 .addNavigationDrawerTab(tab, worldTab, i18n("world"), SVG.PUBLIC);
@@ -180,12 +179,12 @@ public class DownloadPage extends DecoratorAnimatedPage implements DecoratorPage
         runInFX(() -> {
             if (profile == Profiles.getSelectedProfile()) {
                 listenerHolder.add(FXUtils.onWeakChangeAndOperate(profile.selectedVersionProperty(), version -> {
-                    if (modTab.isInitialized()) {
-                        modTab.getNode().loadVersion(profile, null);
-                    }
-                    if (modpackTab.isInitialized()) {
-                        modpackTab.getNode().loadVersion(profile, null);
-                    }
+                    // if (modTab.isInitialized()) {
+                    //     modTab.getNode().loadVersion(profile, null);
+                    // }
+                    // if (modpackTab.isInitialized()) {
+                    //     modpackTab.getNode().loadVersion(profile, null);
+                    // }
                     if (resourcePackTab.isInitialized()) {
                         resourcePackTab.getNode().loadVersion(profile, null);
                     }
@@ -209,18 +208,18 @@ public class DownloadPage extends DecoratorAnimatedPage implements DecoratorPage
         tab.select(newGameTab, false);
     }
 
-    public void showModpackDownloads() {
-        tab.select(modpackTab, false);
-    }
+    // public void showModpackDownloads() {
+    //     tab.select(modpackTab, false);
+    // }
 
     public void showResourcepackDownloads() {
         tab.select(resourcePackTab, false);
     }
 
-    public DownloadListPage showModDownloads() {
-        tab.select(modTab, false);
-        return modTab.getNode();
-    }
+    // public DownloadListPage showModDownloads() {
+    //     tab.select(modTab, false);
+    //     return modTab.getNode();
+    // }
 
     public void showWorldDownloads() {
         tab.select(worldTab, false);

@@ -37,7 +37,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
 import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.download.DefaultDependencyManager;
@@ -54,7 +53,6 @@ import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.SVG;
 import org.jackhuang.hmcl.ui.animation.AnimationUtils;
-import org.jackhuang.hmcl.ui.animation.ContainerAnimations;
 import org.jackhuang.hmcl.ui.animation.TransitionPane;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane;
 import org.jackhuang.hmcl.ui.construct.TwoLineListItem;
@@ -103,6 +101,7 @@ public final class MainPage extends StackPane implements DecoratorPage {
         titleNode.setPadding(new Insets(0, 0, 0, 2));
         titleNode.setAlignment(Pos.CENTER_LEFT);
 
+        // AIUEO: Icon and Title
         ImageView titleIcon = new ImageView(FXUtils.newBuiltinImage("/assets/img/icon-title.png"));
         Label titleLabel = new Label(Metadata.FULL_TITLE);
         if (I18n.isUpsideDown()) {
@@ -117,52 +116,53 @@ public final class MainPage extends StackPane implements DecoratorPage {
 
         setPadding(new Insets(20));
 
-        if (Metadata.isNightly() || (Metadata.isDev() && !Objects.equals(Metadata.VERSION, config().getShownTips().get(ANNOUNCEMENT)))) {
-            String title;
-            String content;
-            if (Metadata.isNightly()) {
-                title = i18n("update.channel.nightly.title");
-                content = i18n("update.channel.nightly.hint");
-            } else {
-                title = i18n("update.channel.dev.title");
-                content = i18n("update.channel.dev.hint");
-            }
-
-            VBox announcementCard = new VBox();
-
-            BorderPane titleBar = new BorderPane();
-            titleBar.getStyleClass().add("title");
-            titleBar.setLeft(new Label(title));
-
-            JFXButton btnHide = new JFXButton();
-            btnHide.setOnAction(e -> {
-                announcementPane.setContent(new StackPane(), ContainerAnimations.FADE);
-                if (Metadata.isDev()) {
-                    config().getShownTips().put(ANNOUNCEMENT, Metadata.VERSION);
-                }
-            });
-            btnHide.getStyleClass().add("announcement-close-button");
-            btnHide.setGraphic(SVG.CLOSE.createIcon(20));
-            titleBar.setRight(btnHide);
-
-            TextFlow body = FXUtils.segmentToTextFlow(content, Controllers::onHyperlinkAction);
-            body.setLineSpacing(4);
-
-            announcementCard.getChildren().setAll(titleBar, body);
-            announcementCard.setSpacing(16);
-            announcementCard.getStyleClass().addAll("card", "announcement");
-
-            VBox announcementBox = new VBox(16);
-            announcementBox.setPadding(new Insets(15));
-            announcementBox.getChildren().add(announcementCard);
-
-            announcementPane = new TransitionPane();
-            announcementPane.setContent(announcementBox, ContainerAnimations.NONE);
-
-            StackPane.setMargin(announcementPane, new Insets(-15));
-            getChildren().add(announcementPane);
-        }
-
+        // AIUEO: THE WHITE MODAL THAT SHOWS UP INSIDE OF THE BODY ON THE RIGHT SIDE
+        // if (Metadata.isNightly() || (Metadata.isDev() && !Objects.equals(Metadata.VERSION, config().getShownTips().get(ANNOUNCEMENT)))) {
+        //     String title;
+        //     String content;
+        //     if (Metadata.isNightly()) {
+        //         title = i18n("update.channel.nightly.title");
+        //         content = i18n("update.channel.nightly.hint");
+        //     } else {
+        //         title = i18n("update.channel.dev.title");
+        //         content = i18n("update.channel.dev.hint");
+        //     }
+        //
+        //     VBox announcementCard = new VBox();
+        //
+        //     BorderPane titleBar = new BorderPane();
+        //     titleBar.getStyleClass().add("title");
+        //     titleBar.setLeft(new Label(title));
+        //
+        //     JFXButton btnHide = new JFXButton();
+        //     btnHide.setOnAction(e -> {
+        //         announcementPane.setContent(new StackPane(), ContainerAnimations.FADE);
+        //         if (Metadata.isDev()) {
+        //             config().getShownTips().put(ANNOUNCEMENT, Metadata.VERSION);
+        //         }
+        //     });
+        //     btnHide.getStyleClass().add("announcement-close-button");
+        //     btnHide.setGraphic(SVG.CLOSE.createIcon(20));
+        //     titleBar.setRight(btnHide);
+        //
+        //     TextFlow body = FXUtils.segmentToTextFlow(content, Controllers::onHyperlinkAction);
+        //     body.setLineSpacing(4);
+        //
+        //     announcementCard.getChildren().setAll(titleBar, body);
+        //     announcementCard.setSpacing(16);
+        //     announcementCard.getStyleClass().addAll("card", "announcement");
+        //
+        //     VBox announcementBox = new VBox(16);
+        //     announcementBox.setPadding(new Insets(15));
+        //     announcementBox.getChildren().add(announcementCard);
+        //
+        //     announcementPane = new TransitionPane();
+        //     announcementPane.setContent(announcementBox, ContainerAnimations.NONE);
+        //
+        //     StackPane.setMargin(announcementPane, new Insets(-15));
+        //     getChildren().add(announcementPane);
+        // }
+        //
         updatePane = new StackPane();
         updatePane.setVisible(false);
         updatePane.getStyleClass().add("bubble");

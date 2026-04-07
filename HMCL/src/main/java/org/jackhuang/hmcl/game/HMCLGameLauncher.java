@@ -17,6 +17,10 @@
  */
 package org.jackhuang.hmcl.game;
 
+import org.glavo.nbt.io.NBTCodec;
+import org.glavo.nbt.tag.CompoundTag;
+import org.glavo.nbt.tag.ListTag;
+import org.glavo.nbt.tag.TagType;
 import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.auth.AuthInfo;
 import org.jackhuang.hmcl.launch.DefaultLauncher;
@@ -143,15 +147,45 @@ public final class HMCLGameLauncher extends DefaultLauncher {
         };
     }
 
+    private static final String[][] DEFAULT_SERVERS = {
+            {"Hack-the-SDGs", "mc.ntust.camp"},
+            {"Cybersecurity", "localhost"},
+    };
+
+    private void generateServersDat() {
+        Path runDir = repository.getRunDirectory(version.getId());
+        Path serversDat = runDir.resolve("servers.dat");
+
+        if (Files.exists(serversDat))
+            return;
+
+        ListTag<CompoundTag> serverList = new ListTag<>(TagType.COMPOUND);
+        for (String[] entry : DEFAULT_SERVERS) {
+            serverList.addTag(new CompoundTag()
+                    .addString("name", entry[0])
+                    .addString("ip", entry[1]));
+        }
+        CompoundTag root = new CompoundTag().addTag("servers", serverList);
+
+        try {
+            Files.createDirectories(runDir);
+            FileUtils.saveSafely(serversDat, os -> NBTCodec.of().writeTag(os, root));
+        } catch (IOException e) {
+            LOG.warning("Unable to generate servers.dat", e);
+        }
+    }
+
     @Override
     public ManagedProcess launch() throws IOException, InterruptedException {
         generateOptionsTxt();
+        generateServersDat();
         return super.launch();
     }
 
     @Override
     public void makeLaunchScript(Path scriptFile) throws IOException {
         generateOptionsTxt();
+        generateServersDat();
         super.makeLaunchScript(scriptFile);
     }
 

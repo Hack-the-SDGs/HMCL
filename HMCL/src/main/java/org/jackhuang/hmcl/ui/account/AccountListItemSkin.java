@@ -31,8 +31,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.auth.Account;
-import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorAccount;
-import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorServer;
 import org.jackhuang.hmcl.auth.microsoft.MicrosoftAccount;
 import org.jackhuang.hmcl.game.TexturesLoader;
 import org.jackhuang.hmcl.setting.Accounts;
@@ -42,7 +40,6 @@ import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.SVG;
 import org.jackhuang.hmcl.ui.construct.SpinnerPane;
-import org.jackhuang.hmcl.util.javafx.BindingMapping;
 
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 
@@ -71,20 +68,9 @@ public final class AccountListItemSkin extends SkinBase<AccountListItem> {
         Label title = new Label();
         title.getStyleClass().add("title");
         title.textProperty().bind(skinnable.titleProperty());
-        Label subtitle = new Label();
-        subtitle.getStyleClass().add("subtitle");
-        subtitle.textProperty().bind(skinnable.subtitleProperty());
-        if (skinnable.getAccount() instanceof AuthlibInjectorAccount) {
-            Tooltip tooltip = new Tooltip();
-            AuthlibInjectorServer server = ((AuthlibInjectorAccount) skinnable.getAccount()).getServer();
-            tooltip.textProperty().bind(BindingMapping.of(server, AuthlibInjectorServer::toString));
-            FXUtils.installSlowTooltip(subtitle, tooltip);
-        }
-        VBox item = new VBox(title, subtitle);
-        item.getStyleClass().add("two-line-list-item");
-        BorderPane.setAlignment(item, Pos.CENTER);
+        BorderPane.setAlignment(title, Pos.CENTER);
 
-        center.getChildren().setAll(canvas, item);
+        center.getChildren().setAll(canvas, title);
         root.setCenter(center);
 
         HBox right = new HBox();
@@ -128,7 +114,7 @@ public final class AccountListItemSkin extends SkinBase<AccountListItem> {
         JFXButton btnRefresh = FXUtils.newToggleButton4(SVG.REFRESH);
         SpinnerPane spinnerRefresh = new SpinnerPane();
         spinnerRefresh.getStyleClass().setAll("small-spinner-pane");
-        if (skinnable.getAccount() instanceof MicrosoftAccount && Accounts.OAUTH_CALLBACK.getClientId().isEmpty()) {
+        if (skinnable.getAccount() instanceof MicrosoftAccount) {
             btnRefresh.setDisable(true);
             FXUtils.installFastTooltip(spinnerRefresh, i18n("account.methods.microsoft.snapshot.tooltip"));
         }

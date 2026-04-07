@@ -52,7 +52,6 @@ import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.SVG;
 import org.jackhuang.hmcl.ui.construct.*;
-import org.jackhuang.hmcl.upgrade.IntegrityChecker;
 import org.jackhuang.hmcl.util.StringUtils;
 import org.jackhuang.hmcl.util.gson.UUIDTypeAdapter;
 import org.jackhuang.hmcl.util.javafx.BindingMapping;
@@ -97,14 +96,14 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
         if (factory == null) {
             if (AccountListPage.RESTRICTED.get()) {
                 showMethodSwitcher = false;
-                factory = Accounts.FACTORY_MICROSOFT;
+                factory = Accounts.FACTORY_AUTHLIB_INJECTOR;
             } else {
                 showMethodSwitcher = true;
                 String preferred = config().getPreferredLoginType();
                 try {
                     factory = Accounts.getAccountFactory(preferred);
                 } catch (IllegalArgumentException e) {
-                    factory = Accounts.FACTORY_OFFLINE;
+                    factory = Accounts.FACTORY_AUTHLIB_INJECTOR;
                 }
             }
         } else {
@@ -276,8 +275,8 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
             setActions(lblErrorMessage, actions);
         }
 
-        if (factory == Accounts.FACTORY_MICROSOFT) {
-            detailsPane = new MicrosoftAccountLoginPane(true);
+        if (false /* factory == Accounts.FACTORY_MICROSOFT */) {
+            // detailsPane = new MicrosoftAccountLoginPane(true);
             setActions();
         } else {
             detailsPane = new AccountDetailsInputPane(factory, btnAccept::fire);
@@ -304,7 +303,6 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
                 String value = links.get(key);
                 if (value != null) {
                     Hyperlink link = new Hyperlink(i18n("account.injector.link." + key));
-                    FXUtils.installSlowTooltip(link, value);
                     link.setOnAction(e -> FXUtils.openLink(value));
                     result.add(link);
                 }
@@ -337,43 +335,26 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
 
             int rowIndex = 0;
 
-            if (!IntegrityChecker.isOfficial() && !(factory instanceof OfflineAccountFactory)) {
-                HintPane hintPane = new HintPane(MessageDialogPane.MessageType.WARNING);
-                hintPane.setSegment(i18n("unofficial.hint"));
-                GridPane.setColumnSpan(hintPane, 2);
-                add(hintPane, 0, rowIndex);
-
-                rowIndex++;
-            }
+            // AIUEO: Disable warning about this being unofficial
+            // There isn't any sensitive data involved, this should be fine ~w~
+            // if (!IntegrityChecker.isOfficial() && !(factory instanceof OfflineAccountFactory)) {
+            //     HintPane hintPane = new HintPane(MessageDialogPane.MessageType.WARNING);
+            //     hintPane.setSegment(i18n("unofficial.hint"));
+            //     GridPane.setColumnSpan(hintPane, 2);
+            //     add(hintPane, 0, rowIndex);
+            //
+            //     rowIndex++;
+            // }
 
             if (factory instanceof BoundAuthlibInjectorAccountFactory) {
                 this.server = ((BoundAuthlibInjectorAccountFactory) factory).getServer();
-
-                Label lblServers = new Label(i18n("account.injector.server"));
-                setHalignment(lblServers, HPos.LEFT);
-                add(lblServers, 0, rowIndex);
-
-                Label lblServerName = new Label(this.server.getName());
-                lblServerName.setMaxWidth(Double.MAX_VALUE);
-                HBox.setHgrow(lblServerName, Priority.ALWAYS);
-
-                HBox linksContainer = new HBox();
-                linksContainer.setAlignment(Pos.CENTER);
-                linksContainer.getChildren().setAll(createHyperlinks(this.server));
-                linksContainer.setMinWidth(USE_PREF_SIZE);
-
-                HBox boxServers = new HBox(lblServerName, linksContainer);
-                boxServers.setAlignment(Pos.CENTER_LEFT);
-                add(boxServers, 1, rowIndex);
-
-                rowIndex++;
             } else if (factory instanceof AuthlibInjectorAccountFactory) {
                 Label lblServers = new Label(i18n("account.injector.server"));
                 setHalignment(lblServers, HPos.LEFT);
                 add(lblServers, 0, rowIndex);
 
                 cboServers = new JFXComboBox<>();
-                cboServers.setCellFactory(jfxListCellFactory(server -> new TwoLineListItem(server.getName(), server.getUrl())));
+                cboServers.setCellFactory(jfxListCellFactory(server -> new TwoLineListItem(server.getName(), null)));
                 cboServers.setConverter(stringConverter(AuthlibInjectorServer::getName));
                 bindContent(cboServers.getItems(), config().getAuthlibInjectorServers());
                 cboServers.getItems().addListener(onInvalidating(
