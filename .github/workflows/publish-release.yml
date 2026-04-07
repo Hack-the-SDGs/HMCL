@@ -1,0 +1,71 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          java-package: 'jdk+fx'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-cleanup: never
+
+      - name: Build with Gradle
+        run: ./gradlew build --no-daemon --parallel
+        env:
+          MICROSOFT_AUTH_ID: ${{ secrets.MICROSOFT_AUTH_ID }}
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+
+      - name: Prepare release assets
+        id: assets
+        run: |
+          cd HMCL/build/libs
+
+          JAR=$(ls HMCL-*.jar | grep -v sources | head -1)
+          EXE=$(ls HMCL-*.exe | head -1)
+          SH=$(ls HMCL-*.sh | head -1)
+
+          echo "jar=$JAR" >> "$GITHUB_OUTPUT"
+          echo "exe=$EXE" >> "$GITHUB_OUTPUT"
+          echo "sh=$SH" >> "$GITHUB_OUTPUT"
+
+          JAR_SHA256=$(cat "$JAR.sha256" | tr -d '\n')
+          EXE_SHA256=$(cat "$EXE.sha256" | tr -d '\n')
+          SH_SHA256=$(cat "$SH.sha256" | tr -d '\n')
+
+          {
+            echo "| File | SHA-256 |"
+            echo "| --- | --- |"
+            echo "| \`$JAR\` | \`$JAR_SHA256\` |"
+            echo "| \`$EXE\` | \`$EXE_SHA256\` |"
+            echo "| \`$SH\` | \`$SH_SHA256\` |"
+          } > "$GITHUB_WORKSPACE/RELEASE_NOTE.md"
+
+      - name: Create GitHub Release
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "HMCL/build/libs/${{ steps.assets.outputs.jar }}" \
+            "HMCL/build/libs/${{ steps.assets.outputs.exe }}" \
+            "HMCL/build/libs/${{ steps.assets.outputs.sh }}" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file RELEASE_NOTE.md \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
