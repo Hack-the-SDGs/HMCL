@@ -19,7 +19,6 @@ package org.jackhuang.hmcl.ui;
 
 import org.jackhuang.hmcl.auth.*;
 import org.jackhuang.hmcl.ui.account.ClassicAccountLoginDialog;
-import org.jackhuang.hmcl.ui.account.MicrosoftAccountLoginPane;
 
 import java.util.Optional;
 import java.util.concurrent.CancellationException;
@@ -47,18 +46,6 @@ public final class DialogController {
             return Optional.ofNullable(res.get()).orElseThrow(CancellationException::new);
         } else if (account instanceof OAuthAccount) {
             throw new CancellationException();
-
-            // CountDownLatch latch = new CountDownLatch(1);
-            // AtomicReference<AuthInfo> res = new AtomicReference<>(null);
-            // runInFX(() -> {
-            //     MicrosoftAccountLoginPane pane = new MicrosoftAccountLoginPane(account, it -> {
-            //         res.set(it);
-            //         latch.countDown();
-            //     }, latch::countDown, false);
-            //     Controllers.dialog(pane);
-            // });
-            // latch.await();
-            // return Optional.ofNullable(res.get()).orElseThrow(CancellationException::new);
         }
         return account.logIn();
     }
