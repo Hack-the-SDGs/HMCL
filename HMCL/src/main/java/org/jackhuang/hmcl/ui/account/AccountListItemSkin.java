@@ -68,14 +68,9 @@ public final class AccountListItemSkin extends SkinBase<AccountListItem> {
         Label title = new Label();
         title.getStyleClass().add("title");
         title.textProperty().bind(skinnable.titleProperty());
-        Label subtitle = new Label();
-        subtitle.getStyleClass().add("subtitle");
-        subtitle.textProperty().bind(skinnable.subtitleProperty());
-        VBox item = new VBox(title, subtitle);
-        item.getStyleClass().add("two-line-list-item");
-        BorderPane.setAlignment(item, Pos.CENTER);
+        BorderPane.setAlignment(title, Pos.CENTER);
 
-        center.getChildren().setAll(canvas, item);
+        center.getChildren().setAll(canvas, title);
         root.setCenter(center);
 
         HBox right = new HBox();

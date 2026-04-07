@@ -61,16 +61,11 @@ public class AccountListItem extends RadioButton {
 
     private final Account account;
     private final StringProperty title = new SimpleStringProperty();
-    private final StringProperty subtitle = new SimpleStringProperty();
 
     public AccountListItem(Account account) {
         this.account = account;
         getStyleClass().clear();
         setUserData(account);
-
-        String loginTypeName = Accounts.getLocalizedLoginTypeName(Accounts.getAccountFactory(account));
-        String portableSuffix = account.isPortable() ? ", " + i18n("account.portable") : "";
-        subtitle.set(loginTypeName + portableSuffix);
 
         StringBinding characterName = Bindings.createStringBinding(account::getCharacter, account);
         if (account instanceof OfflineAccount) {
@@ -189,15 +184,4 @@ public class AccountListItem extends RadioButton {
         return title;
     }
 
-    public String getSubtitle() {
-        return subtitle.get();
-    }
-
-    public void setSubtitle(String subtitle) {
-        this.subtitle.set(subtitle);
-    }
-
-    public StringProperty subtitleProperty() {
-        return subtitle;
-    }
 }
