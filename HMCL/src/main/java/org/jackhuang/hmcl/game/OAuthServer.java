@@ -88,7 +88,7 @@ public final class OAuthServer extends NanoHTTPD implements OAuth.Session {
 
     @Override
     public String getRedirectURI() {
-        return String.format("http://localhost:%d/auth-response", port);
+        return String.format("http://localhost:%d", port);
     }
 
     @Override
@@ -103,7 +103,7 @@ public final class OAuthServer extends NanoHTTPD implements OAuth.Session {
 
     @Override
     public Response serve(IHTTPSession session) {
-        if (!"/auth-response".equals(session.getUri())) {
+        if (!"/".equals(session.getUri()) && !"/auth-response".equals(session.getUri())) {
             return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_HTML, "");
         }
 

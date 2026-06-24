@@ -37,8 +37,8 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
 public class OAuth {
     public static final OAuth MICROSOFT = new OAuth(
-            "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
-            "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+            "https://login.live.com/oauth20_authorize.srf",
+            "https://login.live.com/oauth20_token.srf",
             "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode",
             "https://login.microsoftonline.com/consumers/oauth2/v2.0/token");
 
