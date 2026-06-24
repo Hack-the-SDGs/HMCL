@@ -38,7 +38,6 @@ import javafx.scene.layout.VBox;
 import org.jackhuang.hmcl.auth.Account;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorServer;
 import org.jackhuang.hmcl.Metadata;
-import org.jackhuang.hmcl.setting.Accounts;
 import org.jackhuang.hmcl.setting.SettingsManager;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
@@ -119,7 +118,6 @@ public final class AccountListPage extends DecoratorAnimatedPage implements Deco
     private static class AccountListPageSkin extends DecoratorAnimatedPageSkin<AccountListPage> {
 
         private final ObservableList<AdvancedListItem> authServerItems;
-        private ChangeListener<Boolean> holder;
 
         public AccountListPageSkin(AccountListPage skinnable) {
             super(skinnable);
@@ -144,19 +142,7 @@ public final class AccountListPage extends DecoratorAnimatedPage implements Deco
                         });
                     }
 
-                    AdvancedListItem offlineItem = Metadata.ENABLE_MICROSOFT_LOGIN ? new AdvancedListItem() : null;
-                    if (offlineItem != null) {
-                        offlineItem.getStyleClass().add("navigation-drawer-item");
-                        offlineItem.setTitle(i18n("account.methods.offline"));
-                        offlineItem.setLeftIcon(SVG.PERSON);
-                        offlineItem.setOnAction(e -> {
-                            if (SettingsManager.isUserGameAccountsReadOnly()) {
-                                confirmOverwriteUserAccounts(() -> Controllers.dialog(new CreateAccountPane(Accounts.FACTORY_OFFLINE)));
-                            } else {
-                                Controllers.dialog(new CreateAccountPane(Accounts.FACTORY_OFFLINE));
-                            }
-                        });
-                    }
+                    // Offline login is always disabled in this fork
 
                     VBox boxAuthServers = new VBox();
                     authServerItems = MappedObservableList.create(skinnable.authServersProperty(), server -> {
@@ -200,26 +186,8 @@ public final class AccountListPage extends DecoratorAnimatedPage implements Deco
                     Bindings.bindContent(boxAuthServers.getChildren(), authServerItems);
 
                     ClassTitle title = new ClassTitle(i18n("account.create").toUpperCase(Locale.ROOT));
-                    if (RESTRICTED.get() && microsoftItem != null && offlineItem != null) {
-                        VBox wrapper = new VBox(offlineItem, boxAuthServers);
-                        wrapper.setPadding(Insets.EMPTY);
-                        FXUtils.installFastTooltip(wrapper, i18n("account.login.restricted"));
-
-                        offlineItem.setDisable(true);
-                        boxAuthServers.setDisable(true);
-
-                        boxMethods.getChildren().setAll(title, microsoftItem, wrapper);
-
-                        holder = FXUtils.onWeakChange(RESTRICTED, value -> {
-                            if (!value) {
-                                holder = null;
-                                offlineItem.setDisable(false);
-                                boxAuthServers.setDisable(false);
-                                boxMethods.getChildren().setAll(title, microsoftItem, offlineItem, boxAuthServers);
-                            }
-                        });
-                    } else if (microsoftItem != null && offlineItem != null) {
-                        boxMethods.getChildren().setAll(title, microsoftItem, offlineItem, boxAuthServers);
+                    if (microsoftItem != null) {
+                        boxMethods.getChildren().setAll(title, microsoftItem, boxAuthServers);
                     } else {
                         boxMethods.getChildren().setAll(title, boxAuthServers);
                     }

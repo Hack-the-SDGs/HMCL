@@ -48,7 +48,6 @@ import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.WeakListenerHolder;
 import org.jackhuang.hmcl.ui.construct.*;
-import org.jackhuang.hmcl.upgrade.IntegrityChecker;
 import org.jackhuang.hmcl.util.Lang;
 import org.jackhuang.hmcl.util.QrCodeUtils;
 import org.jackhuang.hmcl.util.StringUtils;
@@ -148,12 +147,6 @@ public class MicrosoftAccountLoginPane extends JFXDialogLayout implements Dialog
             btnLogin.setDisable(true);
             loginButtonSpinner.setLoading(false);
             return;
-        }
-
-        if (!IntegrityChecker.isOfficial()) {
-            var unofficialHintPane = new HintPane(MessageDialogPane.MessageType.WARNING);
-            unofficialHintPane.setSegment(i18n("unofficial.hint"));
-            rootContainer.getChildren().add(unofficialHintPane);
         }
 
         if (currentStep instanceof Step.Init) {
