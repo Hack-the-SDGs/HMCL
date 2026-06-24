@@ -53,9 +53,6 @@ import static org.jackhuang.hmcl.setting.SettingsManager.getAuthlibInjectorServe
 import static org.jackhuang.hmcl.setting.SettingsManager.getUserAccountMetadataRecords;
 import static org.jackhuang.hmcl.setting.SettingsManager.userSettings;
 import static org.jackhuang.hmcl.ui.FXUtils.onInvalidating;
-import static org.jackhuang.hmcl.util.Lang.immutableListOf;
-import static org.jackhuang.hmcl.util.Lang.mapOf;
-import static org.jackhuang.hmcl.util.Pair.pair;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 

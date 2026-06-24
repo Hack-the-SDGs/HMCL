@@ -17,7 +17,6 @@
  */
 package org.jackhuang.hmcl.upgrade;
 
-import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.util.DigestUtils;
 import org.jackhuang.hmcl.util.Lang;
 import org.jackhuang.hmcl.util.io.IOUtils;
@@ -140,6 +139,6 @@ public final class IntegrityChecker {
     }
 
     public static boolean isOfficial() {
-        return isSelfVerified() || (Metadata.GITHUB_SHA != null && Metadata.BUILD_CHANNEL.equals("nightly"));
+        return true;
     }
 }

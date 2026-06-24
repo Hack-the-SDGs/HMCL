@@ -25,11 +25,13 @@ plugins {
 val projectConfig = PropertiesUtils.load(rootProject.file("config/project.properties").toPath())
 
 val isOfficial = JenkinsUtils.IS_ON_CI || GitHubActionUtils.IS_ON_OFFICIAL_REPO
+        || "true".equals(System.getenv("HMCL_OFFICIAL"), ignoreCase = true)
 
 val versionType = System.getenv("VERSION_TYPE") ?: if (isOfficial) "nightly" else "unofficial"
 val versionRoot = System.getenv("VERSION_ROOT") ?: projectConfig.getProperty("versionRoot") ?: "3"
 
 val microsoftAuthId = System.getenv("MICROSOFT_AUTH_ID") ?: ""
+val enableMicrosoftLogin = System.getenv("ENABLE_MICROSOFT_LOGIN") ?: "false"
 val curseForgeApiKey = System.getenv("CURSEFORGE_API_KEY") ?: ""
 
 val launcherExe = System.getenv("HMCL_LAUNCHER_EXE") ?: ""
@@ -160,6 +162,7 @@ val hmclProperties = buildList {
     }
     add("hmcl.version.type" to versionType)
     add("hmcl.microsoft.auth.id" to microsoftAuthId)
+    add("hmcl.enable.microsoft.login" to enableMicrosoftLogin)
     add("hmcl.curseforge.apikey" to curseForgeApiKey)
     add("hmcl.authlib-injector.version" to libs.authlib.injector.get().version!!)
     add("hmcl.lwjgl-unsafe-agent.version" to libs.lwjgl.unsafe.agent.get().version!!)

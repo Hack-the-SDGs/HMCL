@@ -9,8 +9,17 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - variant: standard
+            enable_ms_login: "false"
+            suffix: ""
+          - variant: mslogin
+            enable_ms_login: "true"
+            suffix: "-mslogin"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -30,41 +39,70 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build --no-daemon --parallel
         env:
+          HMCL_OFFICIAL: "true"
+          ENABLE_MICROSOFT_LOGIN: ${{ matrix.enable_ms_login }}
           MICROSOFT_AUTH_ID: ${{ secrets.MICROSOFT_AUTH_ID }}
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
 
-      - name: Prepare release assets
-        id: assets
+      - name: Rename artifacts
         run: |
           set -euo pipefail
           cd HMCL/build/libs
+          SUFFIX="${{ matrix.suffix }}"
+          for f in HMCL-*.jar HMCL-*.exe HMCL-*.sh; do
+            [ -f "$f" ] || continue
+            [[ "$f" == *sources* ]] && continue
+            EXT="${f##*.}"
+            BASE="${f%.*}"
+            mv "$f" "${BASE}${SUFFIX}.${EXT}"
+            # Also rename hash files
+            for hash in sha1 sha256 sha512; do
+              [ -f "$f.$hash" ] && mv "$f.$hash" "${BASE}${SUFFIX}.${EXT}.$hash"
+            done
+          done
 
-          JAR=$(ls HMCL-*.jar | grep -v sources | head -1)
-          EXE=$(ls HMCL-*.exe | head -1)
-          SH=$(ls HMCL-*.sh | head -1)
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.variant }}
+          path: |
+            HMCL/build/libs/HMCL-*${{ matrix.suffix }}.jar
+            HMCL/build/libs/HMCL-*${{ matrix.suffix }}.exe
+            HMCL/build/libs/HMCL-*${{ matrix.suffix }}.sh
+            HMCL/build/libs/HMCL-*${{ matrix.suffix }}.*.sha256
 
-          echo "jar=$JAR" >> "$GITHUB_OUTPUT"
-          echo "exe=$EXE" >> "$GITHUB_OUTPUT"
-          echo "sh=$SH" >> "$GITHUB_OUTPUT"
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
 
-          JAR_SHA256=$(cat "$JAR.sha256" | tr -d '\n')
-          EXE_SHA256=$(cat "$EXE.sha256" | tr -d '\n')
-          SH_SHA256=$(cat "$SH.sha256" | tr -d '\n')
-
+      - name: Prepare release notes
+        id: notes
+        run: |
+          set -euo pipefail
           {
             echo "| File | SHA-256 |"
             echo "| --- | --- |"
-            echo "| \`$JAR\` | \`$JAR_SHA256\` |"
-            echo "| \`$EXE\` | \`$EXE_SHA256\` |"
-            echo "| \`$SH\` | \`$SH_SHA256\` |"
-          } > "$GITHUB_WORKSPACE/RELEASE_NOTE.md"
+            for f in assets/HMCL-*.{jar,exe,sh}; do
+              [ -f "$f" ] || continue
+              NAME=$(basename "$f")
+              SHA=$(cat "$f.sha256" 2>/dev/null | tr -d '\n' || echo "n/a")
+              echo "| \`$NAME\` | \`$SHA\` |"
+            done
+          } > RELEASE_NOTE.md
 
       - name: Create GitHub Release
         run: |
           gh release create "$GITHUB_REF_NAME" \
-            "HMCL/build/libs/${{ steps.assets.outputs.jar }}" \
-            "HMCL/build/libs/${{ steps.assets.outputs.exe }}" \
-            "HMCL/build/libs/${{ steps.assets.outputs.sh }}" \
+            assets/HMCL-*.jar \
+            assets/HMCL-*.exe \
+            assets/HMCL-*.sh \
+            --repo "$GITHUB_REPOSITORY" \
             --title "$GITHUB_REF_NAME" \
             --notes-file RELEASE_NOTE.md \
             --generate-notes
