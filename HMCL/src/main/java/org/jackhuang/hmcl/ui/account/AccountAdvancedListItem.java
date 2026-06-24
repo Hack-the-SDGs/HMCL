@@ -17,7 +17,6 @@
  */
 package org.jackhuang.hmcl.ui.account;
 
-import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
@@ -25,18 +24,24 @@ import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Tooltip;
 import org.jackhuang.hmcl.auth.Account;
-import org.jackhuang.hmcl.auth.yggdrasil.YggdrasilAccount;
+import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorAccount;
+import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorServer;
 import org.jackhuang.hmcl.game.TexturesLoader;
 import org.jackhuang.hmcl.setting.Accounts;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.construct.AdvancedListItem;
+import org.jackhuang.hmcl.util.StringUtils;
 import org.jackhuang.hmcl.util.javafx.BindingMapping;
 
+import static javafx.beans.binding.Bindings.createStringBinding;
+import static org.jackhuang.hmcl.setting.Accounts.getAccountFactory;
+import static org.jackhuang.hmcl.setting.Accounts.getLocalizedLoginTypeName;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 
 public class AccountAdvancedListItem extends AdvancedListItem {
     private final Tooltip tooltip;
     private final Canvas canvas;
+    private boolean tooltipInstalled;
 
     private final ObjectProperty<Account> account = new SimpleObjectProperty<Account>() {
 
@@ -45,18 +50,22 @@ public class AccountAdvancedListItem extends AdvancedListItem {
             Account account = get();
             if (account == null) {
                 titleProperty().unbind();
-                tooltip.textProperty().unbind();
+                subtitleProperty().unbind();
                 setTitle(i18n("account.missing"));
-                setSubtitle(null);
+                setSubtitle(i18n("account.missing.add"));
                 tooltip.setText(i18n("account.create"));
+                installTooltip();
 
                 TexturesLoader.unbindAvatar(canvas);
                 TexturesLoader.drawAvatar(canvas, TexturesLoader.getDefaultSkinImage());
 
             } else {
-                titleProperty().bind(BindingMapping.of(account, Account::getCharacter));
-                setSubtitle(null);
-                tooltip.textProperty().bind(accountTooltip(account));
+                titleProperty().bind(createStringBinding(() -> {
+                    String profileName = account.getProfileName();
+                    return StringUtils.isBlank(profileName) ? account.getProfileID().toString() : profileName;
+                }, account));
+                subtitleProperty().bind(accountSubtitle(account));
+                uninstallTooltip();
                 TexturesLoader.bindAvatar(canvas, account);
             }
         }
@@ -68,7 +77,6 @@ public class AccountAdvancedListItem extends AdvancedListItem {
 
     public AccountAdvancedListItem(Account account) {
         tooltip = new Tooltip();
-        FXUtils.installFastTooltip(this, tooltip);
 
         canvas = new Canvas(32, 32);
         canvas.setMouseTransparent(true);
@@ -89,13 +97,25 @@ public class AccountAdvancedListItem extends AdvancedListItem {
         return account;
     }
 
-    private static ObservableValue<String> accountTooltip(Account account) {
-        if (account instanceof YggdrasilAccount) {
-            return Bindings.format("%s (%s)",
-                    BindingMapping.of(account, Account::getCharacter),
-                    account.getUsername());
+    private static ObservableValue<String> accountSubtitle(Account account) {
+        if (account instanceof AuthlibInjectorAccount) {
+            return BindingMapping.of(((AuthlibInjectorAccount) account).getServer(), AuthlibInjectorServer::getName);
         } else {
-            return BindingMapping.of(account, Account::getCharacter);
+            return createStringBinding(() -> getLocalizedLoginTypeName(getAccountFactory(account)));
+        }
+    }
+
+    private void installTooltip() {
+        if (!tooltipInstalled) {
+            FXUtils.installFastTooltip(this, tooltip);
+            tooltipInstalled = true;
+        }
+    }
+
+    private void uninstallTooltip() {
+        if (tooltipInstalled) {
+            Tooltip.uninstall(this, tooltip);
+            tooltipInstalled = false;
         }
     }
 

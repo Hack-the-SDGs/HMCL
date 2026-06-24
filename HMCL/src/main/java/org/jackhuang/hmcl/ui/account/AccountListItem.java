@@ -29,8 +29,10 @@ import javafx.scene.image.Image;
 import javafx.stage.FileChooser;
 import org.jackhuang.hmcl.auth.Account;
 import org.jackhuang.hmcl.auth.AuthenticationException;
+import org.jackhuang.hmcl.auth.ClassicAccount;
 import org.jackhuang.hmcl.auth.CredentialExpiredException;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorAccount;
+import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorServer;
 import org.jackhuang.hmcl.auth.offline.OfflineAccount;
 import org.jackhuang.hmcl.auth.yggdrasil.CompleteGameProfile;
 import org.jackhuang.hmcl.auth.yggdrasil.TextureType;
@@ -40,6 +42,7 @@ import org.jackhuang.hmcl.task.Task;
 import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.DialogController;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane.MessageType;
+import org.jackhuang.hmcl.util.StringUtils;
 import org.jackhuang.hmcl.util.io.FileUtils;
 import org.jackhuang.hmcl.util.skin.InvalidSkinException;
 import org.jackhuang.hmcl.util.skin.NormalizedSkin;
@@ -54,26 +57,39 @@ import java.util.concurrent.CancellationException;
 
 import static java.util.Collections.emptySet;
 import static javafx.beans.binding.Bindings.createBooleanBinding;
-import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
+import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
 public class AccountListItem extends RadioButton {
 
     private final Account account;
     private final StringProperty title = new SimpleStringProperty();
+    private final StringProperty subtitle = new SimpleStringProperty();
 
     public AccountListItem(Account account) {
         this.account = account;
         getStyleClass().clear();
         setUserData(account);
 
-        StringBinding characterName = Bindings.createStringBinding(account::getCharacter, account);
-        if (account instanceof OfflineAccount) {
-            title.bind(characterName);
+        String loginTypeName = Accounts.getLocalizedLoginTypeName(Accounts.getAccountFactory(account));
+        String portableSuffix = account.isPortable() ? ", " + i18n("account.portable") : "";
+        if (account instanceof AuthlibInjectorAccount) {
+            AuthlibInjectorServer server = ((AuthlibInjectorAccount) account).getServer();
+            subtitle.bind(Bindings.concat(
+                    loginTypeName, ", ", i18n("account.injector.server"), ": ",
+                    Bindings.createStringBinding(server::getName, server), portableSuffix));
         } else {
-            title.bind(
-                    account.getUsername().isEmpty() ? characterName :
-                            Bindings.concat(account.getUsername(), " - ", characterName));
+            subtitle.set(loginTypeName + portableSuffix);
+        }
+
+        StringBinding profileName = Bindings.createStringBinding(() -> {
+            String name = account.getProfileName();
+            return StringUtils.isBlank(name) ? account.getProfileID().toString() : name;
+        }, account);
+        if (account instanceof ClassicAccount classicAccount) {
+            title.bind(Bindings.concat(profileName, " - ", classicAccount.getLoginName()));
+        } else {
+            title.bind(profileName);
         }
     }
 
@@ -105,7 +121,7 @@ public class AccountListItem extends RadioButton {
 
     public ObservableBooleanValue canUploadSkin() {
         if (account instanceof AuthlibInjectorAccount aiAccount) {
-            ObjectBinding<Optional<CompleteGameProfile>> profile = aiAccount.getYggdrasilService().getProfileRepository().binding(aiAccount.getUUID());
+            ObjectBinding<Optional<CompleteGameProfile>> profile = aiAccount.getYggdrasilService().getProfileRepository().binding(aiAccount.getProfileID());
             return createBooleanBinding(() -> {
                 Set<TextureType> uploadableTextures = profile.get()
                         .map(AuthlibInjectorAccount::getUploadableTextures)
@@ -151,6 +167,9 @@ public class AccountListItem extends RadioButton {
                     if (skinImg.isError()) {
                         throw new InvalidSkinException("Failed to read skin image", skinImg.getException());
                     }
+                    if (skinImg.getWidth() != 64 || (skinImg.getHeight() != 32 && skinImg.getHeight() != 64)) {
+                        throw new InvalidSkinException("Invalid skin size");
+                    }
                     NormalizedSkin skin = new NormalizedSkin(skinImg);
                     String model = skin.isSlim() ? "slim" : "";
                     LOG.info("Uploading skin [" + selectedFile + "], model [" + model + "]");
@@ -165,6 +184,14 @@ public class AccountListItem extends RadioButton {
     }
 
     public void remove() {
+        if (!Accounts.canRemoveAccount(account)) {
+            Controllers.confirmBackupAndOverwrite(i18n("account.storage.read_only"), () -> {
+                Accounts.forceOverwriteAccountFiles(account);
+                Accounts.getAccounts().remove(account);
+            });
+            return;
+        }
+
         Accounts.getAccounts().remove(account);
     }
 
@@ -184,4 +211,15 @@ public class AccountListItem extends RadioButton {
         return title;
     }
 
+    public String getSubtitle() {
+        return subtitle.get();
+    }
+
+    public void setSubtitle(String subtitle) {
+        this.subtitle.set(subtitle);
+    }
+
+    public StringProperty subtitleProperty() {
+        return subtitle;
+    }
 }

@@ -39,7 +39,6 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Stream;
 
-import static org.jackhuang.hmcl.setting.ConfigHolder.config;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
 /**
@@ -68,7 +67,7 @@ public final class HMCLGameLauncher extends DefaultLauncher {
     }
 
     private void generateOptionsTxt() {
-        if (config().isDisableAutoGameOptions())
+        if (options.isDisableAutoGameOptions())
             return;
 
         Path runDir = repository.getRunDirectory(version.getId());
@@ -193,7 +192,7 @@ public final class HMCLGameLauncher extends DefaultLauncher {
     protected void appendJvmArgs(CommandBuilder result) {
         super.appendJvmArgs(result);
 
-        if (config().getAllowAutoAgent()
+        if (options.isAllowAutoAgent()
                 && !options.isNoGeneratedJVMArgs()
                 && !options.isNoGeneratedOptimizingJVMArgs()
                 && NativePatcher.needPatchMemoryUtil(version, options.getJava().getParsedVersion())) {

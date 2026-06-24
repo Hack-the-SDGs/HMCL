@@ -30,7 +30,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.MouseButton;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import org.jackhuang.hmcl.game.GameDumpGenerator;
@@ -39,7 +38,6 @@ import org.jackhuang.hmcl.setting.StyleSheets;
 import org.jackhuang.hmcl.task.Schedulers;
 import org.jackhuang.hmcl.theme.Themes;
 import org.jackhuang.hmcl.ui.construct.MessageDialogPane;
-import org.jackhuang.hmcl.ui.construct.NoneMultipleSelectionModel;
 import org.jackhuang.hmcl.ui.construct.SpinnerPane;
 import org.jackhuang.hmcl.util.CircularArrayList;
 import org.jackhuang.hmcl.util.Lang;
@@ -54,10 +52,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.jackhuang.hmcl.setting.ConfigHolder.config;
+import static org.jackhuang.hmcl.setting.SettingsManager.settings;
 import static org.jackhuang.hmcl.util.Lang.thread;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
@@ -66,6 +67,7 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
  * @author huangyuhui
  */
 public final class LogWindow extends Stage {
+    private static final PseudoClass SELECTED = PseudoClass.getPseudoClass("selected");
 
     private static final Log4jLevel[] LEVELS = {Log4jLevel.FATAL, Log4jLevel.ERROR, Log4jLevel.WARN, Log4jLevel.INFO, Log4jLevel.DEBUG};
 
@@ -164,12 +166,15 @@ public final class LogWindow extends Stage {
         private final BooleanProperty autoScroll = new SimpleBooleanProperty();
         private final StringProperty[] buttonText = new StringProperty[LEVELS.length];
         private final BooleanProperty[] showLevel = new BooleanProperty[LEVELS.length];
+        private final JFXButton btnAlwaysOnTop = FXUtils.newToggleButton4(SVG.KEEP, 20);
+        private final Stage stage = LogWindow.this;
         private final JFXComboBox<Integer> cboLines = new JFXComboBox<>();
         private final StackPane stackPane = new StackPane();
 
         LogWindowImpl() {
             getStyleClass().add("log-window");
 
+            listView.getStyleClass().add("no-horizontal-scrollbar");
             listView.getProperties().put("no-smooth-scrolling", true);
             listView.setItems(FXCollections.observableList(new CircularArrayList<>(logs.size())));
 
@@ -178,9 +183,15 @@ public final class LogWindow extends Stage {
                 showLevel[i] = new SimpleBooleanProperty(true);
             }
 
+            btnAlwaysOnTop.setOnAction(e -> stage.setAlwaysOnTop(!stage.isAlwaysOnTop()));
+            btnAlwaysOnTop.getStyleClass().add("always-on-top-button");
+            stage.alwaysOnTopProperty().addListener((observable, oldValue, newValue) -> {
+                btnAlwaysOnTop.pseudoClassStateChanged(SELECTED, newValue);
+            });
+
             cboLines.getItems().setAll(500, 2000, 5000, 10000);
             cboLines.setValue(Log.getLogLines());
-            cboLines.getSelectionModel().selectedItemProperty().addListener((a, b, newValue) -> config().setLogLines(newValue));
+            cboLines.getSelectionModel().selectedItemProperty().addListener((a, b, newValue) -> settings().logLinesProperty().set(newValue));
 
             for (int i = 0; i < LEVELS.length; ++i) {
                 buttonText[i].bind(Bindings.concat(levelCountMap.get(LEVELS[i]), " " + LEVELS[i].name().toLowerCase(Locale.ROOT) + "s"));
@@ -260,9 +271,6 @@ public final class LogWindow extends Stage {
         private static final PseudoClass INFO = PseudoClass.getPseudoClass("info");
         private static final PseudoClass DEBUG = PseudoClass.getPseudoClass("debug");
         private static final PseudoClass TRACE = PseudoClass.getPseudoClass("trace");
-        private static final PseudoClass SELECTED = PseudoClass.getPseudoClass("selected");
-
-        private final Set<ListCell<Log>> selected = new HashSet<>();
         private final JFXSnackbar snackbar = new JFXSnackbar();
 
         LogWindowSkin(LogWindowImpl control) {
@@ -284,7 +292,9 @@ public final class LogWindow extends Stage {
                     hBox.setAlignment(Pos.CENTER_LEFT);
 
                     Label label = new Label(i18n("logwindow.show_lines"));
-                    hBox.getChildren().setAll(label, control.cboLines);
+
+                    FXUtils.installFastTooltip(control.btnAlwaysOnTop, i18n("logwindow.always_on_top"));
+                    hBox.getChildren().setAll(control.btnAlwaysOnTop, label, control.cboLines);
 
                     borderPane.setLeft(hBox);
                 }
@@ -308,16 +318,16 @@ public final class LogWindow extends Stage {
 
             {
                 ListView<Log> listView = control.listView;
+                listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
                 listView.getItems().addListener((InvalidationListener) observable -> {
                     if (!listView.getItems().isEmpty() && control.autoScroll.get())
                         listView.scrollTo(listView.getItems().size() - 1);
                 });
 
-                listView.setStyle("-fx-font-family: \"" + Lang.requireNonNullElse(config().getFontFamily(), FXUtils.DEFAULT_MONOSPACE_FONT)
-                        + "\"; -fx-font-size: " + config().getFontSize() + "px;");
+                listView.setStyle("-fx-font-family: \"" + Lang.requireNonNullElse(settings().logFontFamilyProperty().get(), FXUtils.DEFAULT_MONOSPACE_FONT)
+                        + "\"; -fx-font-size: " + settings().logFontSizeProperty().get() + "px;");
                 listView.setCellFactory(x -> new ListCell<>() {
                     {
-                        x.setSelectionModel(new NoneMultipleSelectionModel<>());
                         getStyleClass().add("log-window-list-cell");
                         Region clippedContainer = (Region) listView.lookup(".clipped-container");
                         if (clippedContainer != null) {
@@ -327,32 +337,6 @@ public final class LogWindow extends Stage {
                         setPadding(new Insets(2));
                         setWrapText(true);
                         setGraphic(null);
-
-                        setOnMouseClicked(event -> {
-                            if (event.getButton() != MouseButton.PRIMARY)
-                                return;
-
-                            if (!event.isControlDown()) {
-                                for (ListCell<Log> logListCell : selected) {
-                                    if (logListCell != this) {
-                                        logListCell.pseudoClassStateChanged(SELECTED, false);
-                                        if (logListCell.getItem() != null) {
-                                            logListCell.getItem().setSelected(false);
-                                        }
-                                    }
-                                }
-
-                                selected.clear();
-                            }
-
-                            selected.add(this);
-                            pseudoClassStateChanged(SELECTED, true);
-                            if (getItem() != null) {
-                                getItem().setSelected(true);
-                            }
-
-                            event.consume();
-                        });
                     }
 
                     @Override
@@ -366,7 +350,6 @@ public final class LogWindow extends Stage {
                         pseudoClassStateChanged(INFO, !empty && item.getLevel() == Log4jLevel.INFO);
                         pseudoClassStateChanged(DEBUG, !empty && item.getLevel() == Log4jLevel.DEBUG);
                         pseudoClassStateChanged(TRACE, !empty && item.getLevel() == Log4jLevel.TRACE);
-                        pseudoClassStateChanged(SELECTED, !empty && item.isSelected());
 
                         if (empty) {
                             setText(null);
@@ -378,10 +361,13 @@ public final class LogWindow extends Stage {
 
                 listView.setOnKeyPressed(event -> {
                     if (event.isControlDown() && event.getCode() == KeyCode.C) {
+                        if (listView.getSelectionModel().isEmpty())
+                            return;
+
                         StringBuilder stringBuilder = new StringBuilder();
 
-                        for (Log item : listView.getItems()) {
-                            if (item != null && item.isSelected()) {
+                        for (Log item : listView.getSelectionModel().getSelectedItems()) {
+                            if (item != null) {
                                 if (item.getLog() != null)
                                     stringBuilder.append(item.getLog());
                                 stringBuilder.append('\n');

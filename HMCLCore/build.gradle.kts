@@ -16,7 +16,7 @@ dependencies {
     api(libs.kala.compress.tar)
     api(libs.simple.png.javafx)
     api(libs.gson)
-    api(libs.toml)
+    api(libs.tomlj)
     api(libs.xz)
     api(libs.lz4)
     api(libs.fx.gson)
@@ -27,7 +27,8 @@ dependencies {
     api(libs.jna)
     api(libs.pci.ids)
     api(libs.hello.nbt)
-
+    api(libs.weburl)
+    api(libs.uuid.tools)
     compileOnlyApi(libs.jetbrains.annotations)
 
     testImplementation(libs.jna.platform)

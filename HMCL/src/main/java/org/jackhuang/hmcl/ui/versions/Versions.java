@@ -28,7 +28,7 @@ import org.jackhuang.hmcl.download.game.GameAssetDownloadTask;
 import org.jackhuang.hmcl.download.game.GameDownloadTask;
 import org.jackhuang.hmcl.download.game.GameLibrariesTask;
 import org.jackhuang.hmcl.game.*;
-import org.jackhuang.hmcl.mod.RemoteMod;
+import org.jackhuang.hmcl.addon.RemoteAddon;
 import org.jackhuang.hmcl.setting.*;
 import org.jackhuang.hmcl.task.FileDownloadTask;
 import org.jackhuang.hmcl.task.Schedulers;
@@ -76,15 +76,15 @@ public final class Versions {
         }
     }
 
-    public static void downloadModpackImpl(DownloadProvider downloadProvider, Profile profile, String version, RemoteMod mod, RemoteMod.Version file) {
+    public static void downloadModpackImpl(DownloadProvider downloadProvider, Profile profile, String version, RemoteAddon mod, RemoteAddon.Version file) {
         Path modpack;
         List<URI> downloadURLs;
         try {
-            downloadURLs = downloadProvider.injectURLWithCandidates(file.getFile().getUrl());
+            downloadURLs = downloadProvider.injectURLWithCandidates(file.file().url());
             modpack = Files.createTempFile("modpack", ".zip");
         } catch (IOException | IllegalArgumentException e) {
             Controllers.dialog(
-                    i18n("install.failed.downloading.detail", file.getFile().getUrl()) + "\n" + StringUtils.getStackTrace(e),
+                    i18n("install.failed.downloading.detail", file.file().url()) + "\n" + StringUtils.getStackTrace(e),
                     i18n("download.failed.no_code"), MessageDialogPane.MessageType.ERROR);
             return;
         }
@@ -97,14 +97,14 @@ public final class Versions {
                                     installWizardProvider = new ModpackInstallWizardProvider(profile, modpack, version);
                                 else
                                     installWizardProvider = new ModpackInstallWizardProvider(profile, modpack);
-                                if (StringUtils.isNotBlank(mod.getIconUrl()))
-                                    installWizardProvider.setIconUrl(mod.getIconUrl());
+                                if (StringUtils.isNotBlank(mod.iconUrl()))
+                                    installWizardProvider.setIconUrl(mod.iconUrl());
                                 Controllers.getDecorator().startWizard(installWizardProvider);
                             } else if (e instanceof CancellationException) {
                                 Controllers.showToast(i18n("message.cancelled"));
                             } else {
                                 Controllers.dialog(
-                                        i18n("install.failed.downloading.detail", file.getFile().getUrl()) + "\n" + StringUtils.getStackTrace(e),
+                                        i18n("install.failed.downloading.detail", file.file().url()) + "\n" + StringUtils.getStackTrace(e),
                                         i18n("download.failed.no_code"), MessageDialogPane.MessageType.ERROR);
                             }
                         }),
@@ -114,7 +114,8 @@ public final class Versions {
     }
 
     public static void deleteVersion(Profile profile, String version) {
-        boolean isIndependent = profile.getVersionSetting(version).getGameDirType() == GameDirectoryType.VERSION_FOLDER;
+        boolean isIndependent = profile.getRepository().getRunDirectory(version).toAbsolutePath().normalize()
+                .equals(profile.getRepository().getVersionRoot(version).toAbsolutePath().normalize());
         String message = isIndependent ? i18n("version.manage.remove.confirm.independent", version) :
                 i18n("version.manage.remove.confirm.trash", version, version + "_removed");
 
@@ -143,7 +144,7 @@ public final class Versions {
                 profile.getRepository().refreshVersionsAsync()
                         .thenRunAsync(Schedulers.javafx(), () -> {
                             if (profile.getRepository().hasVersion(newName)) {
-                                profile.setSelectedVersion(newName);
+                                Profiles.setSelectedInstance(profile, newName);
                             }
                         }).start();
             } else {
@@ -190,7 +191,7 @@ public final class Versions {
                             .thenRunAsync(repository::refreshVersions)
                             .whenComplete(Schedulers.javafx(), (exception) -> {
                                 if (exception == null) {
-                                    profile.setSelectedVersion(result);
+                                    Profiles.setSelectedInstance(profile, result);
                                 } else {
                                     Controllers.dialog(
                                             DownloadProviders.localizeErrorMessage(exception), i18n("install.failed"), MessageDialogPane.MessageType.ERROR);
@@ -264,6 +265,11 @@ public final class Versions {
             chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(i18n("extension.ps1"), "*.ps1"));
             Path file = FileUtils.toPath(chooser.showSaveDialog(Controllers.getStage()));
             if (file != null) {
+                if (!isValidScriptExtension(FileUtils.getExtension(file))) {
+                    String defaultExt = getDefaultScriptExtension();
+                    file = file.resolveSibling(file.getFileName().toString() + "." + defaultExt);
+                }
+
                 LauncherHelper launcherHelper = new LauncherHelper(profile, account, id);
                 for (Consumer<LauncherHelper> injecter : injecters) {
                     injecter.accept(launcherHelper);
@@ -271,6 +277,21 @@ public final class Versions {
                 launcherHelper.makeLaunchScript(file);
             }
         });
+    }
+
+    private static boolean isValidScriptExtension(String ext) {
+        if (OperatingSystem.CURRENT_OS == OperatingSystem.WINDOWS) {
+            return ext.equalsIgnoreCase("bat") || ext.equalsIgnoreCase("ps1");
+        }
+        return ext.equalsIgnoreCase("sh") || ext.equalsIgnoreCase("bash") || ext.equalsIgnoreCase("command") || ext.equalsIgnoreCase("ps1");
+    }
+
+    private static String getDefaultScriptExtension() {
+        return switch (OperatingSystem.CURRENT_OS) {
+            case WINDOWS -> "bat";
+            case MACOS -> "command";
+            default -> "sh";
+        };
     }
 
     @SafeVarargs
@@ -318,7 +339,7 @@ public final class Versions {
 
     private static void ensureSelectedAccount(Consumer<Account> action) {
         Account account = Accounts.getSelectedAccount();
-        if (ConfigHolder.isNewlyCreated() && !AuthlibInjectorServers.getServers().isEmpty() &&
+        if (SettingsManager.isNewlyCreated() && !AuthlibInjectorServers.getServers().isEmpty() &&
                 !(account instanceof AuthlibInjectorAccount && AuthlibInjectorServers.getServers().contains(((AuthlibInjectorAccount) account).getServer()))) {
             CreateAccountPane dialog = new CreateAccountPane(AuthlibInjectorServers.getServers().iterator().next());
             dialog.addEventHandler(DialogCloseEvent.CLOSE, e -> {

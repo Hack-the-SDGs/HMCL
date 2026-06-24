@@ -33,9 +33,12 @@ import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.layout.*;
+import org.glavo.uuid.UUIDs;
+import org.jackhuang.hmcl.auth.Account;
 import org.jackhuang.hmcl.auth.AccountFactory;
 import org.jackhuang.hmcl.auth.CharacterSelector;
 import org.jackhuang.hmcl.auth.NoSelectedCharacterException;
+import org.jackhuang.hmcl.Metadata;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorAccountFactory;
 import org.jackhuang.hmcl.auth.authlibinjector.AuthlibInjectorServer;
 import org.jackhuang.hmcl.auth.authlibinjector.BoundAuthlibInjectorAccountFactory;
@@ -52,8 +55,8 @@ import org.jackhuang.hmcl.ui.Controllers;
 import org.jackhuang.hmcl.ui.FXUtils;
 import org.jackhuang.hmcl.ui.SVG;
 import org.jackhuang.hmcl.ui.construct.*;
+import org.jackhuang.hmcl.upgrade.IntegrityChecker;
 import org.jackhuang.hmcl.util.StringUtils;
-import org.jackhuang.hmcl.util.gson.UUIDTypeAdapter;
 import org.jackhuang.hmcl.util.javafx.BindingMapping;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,7 +68,8 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableList;
 import static javafx.beans.binding.Bindings.bindContent;
 import static javafx.beans.binding.Bindings.createBooleanBinding;
-import static org.jackhuang.hmcl.setting.ConfigHolder.config;
+import static org.jackhuang.hmcl.setting.SettingsManager.settings;
+import static org.jackhuang.hmcl.setting.SettingsManager.getAuthlibInjectorServers;
 import static org.jackhuang.hmcl.ui.FXUtils.*;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.javafx.ExtendedProperties.classPropertyFor;
@@ -94,12 +98,12 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
 
     public CreateAccountPane(AccountFactory<?> factory) {
         if (factory == null) {
-            if (AccountListPage.RESTRICTED.get()) {
+            if (AccountListPage.RESTRICTED.get() && Metadata.ENABLE_MICROSOFT_LOGIN) {
                 showMethodSwitcher = false;
-                factory = Accounts.FACTORY_AUTHLIB_INJECTOR;
+                factory = Accounts.FACTORY_MICROSOFT;
             } else {
-                showMethodSwitcher = true;
-                String preferred = config().getPreferredLoginType();
+                showMethodSwitcher = Metadata.ENABLE_MICROSOFT_LOGIN;
+                String preferred = settings().preferredLoginTypeProperty().get();
                 try {
                     factory = Accounts.getAccountFactory(preferred);
                 } catch (IllegalArgumentException e) {
@@ -167,7 +171,7 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
                         if (newItem == null)
                             return;
                         AccountFactory<?> newMethod = (AccountFactory<?>) newItem.getUserData();
-                        config().setPreferredLoginType(Accounts.getLoginType(newMethod));
+                        settings().preferredLoginTypeProperty().set(Accounts.getLoginType(newMethod));
                         this.factory = newMethod;
                         initDetailsPane();
                     });
@@ -222,21 +226,17 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
 
             loginTask = Task.supplyAsync(() -> factory.create(new DialogCharacterSelector(), username, password, null, additionalData))
                     .whenComplete(Schedulers.javafx(), account -> {
-                        int oldIndex = Accounts.getAccounts().indexOf(account);
-                        if (oldIndex == -1) {
-                            Accounts.getAccounts().add(account);
-                        } else {
-                            // adding an already-added account
-                            // instead of discarding the new account, we first remove the existing one then add the new one
-                            Accounts.getAccounts().remove(oldIndex);
-                            Accounts.getAccounts().add(oldIndex, account);
+                        if (Accounts.isAccountFilesReadOnly(account)) {
+                            body.setDisable(false);
+                            spinner.hideSpinner();
+                            Controllers.confirmBackupAndOverwrite(i18n("account.storage.read_only"), () -> {
+                                Accounts.forceOverwriteAccountFiles(account);
+                                completeLogin(account);
+                            });
+                            return;
                         }
 
-                        // select the new account
-                        Accounts.setSelectedAccount(account);
-
-                        spinner.hideSpinner();
-                        fireEvent(new DialogCloseEvent());
+                        completeLogin(account);
                     }, exception -> {
                         if (exception instanceof NoSelectedCharacterException) {
                             fireEvent(new DialogCloseEvent());
@@ -260,6 +260,23 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
         }
     }
 
+    /// Adds the logged-in account, selects it, and closes the dialog.
+    private void completeLogin(Account account) {
+        int oldIndex = Accounts.getAccounts().indexOf(account);
+        if (oldIndex == -1) {
+            Accounts.getAccounts().add(account);
+        } else {
+            // Add an already-added account by replacing the existing entry with the new credentials.
+            Accounts.getAccounts().remove(oldIndex);
+            Accounts.getAccounts().add(oldIndex, account);
+        }
+
+        Accounts.setSelectedAccount(account);
+
+        spinner.hideSpinner();
+        fireEvent(new DialogCloseEvent());
+    }
+
     private void onCancel() {
         if (loginTask != null) {
             loginTask.cancel();
@@ -275,8 +292,8 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
             setActions(lblErrorMessage, actions);
         }
 
-        if (false /* factory == Accounts.FACTORY_MICROSOFT */) {
-            // detailsPane = new MicrosoftAccountLoginPane(true);
+        if (Metadata.ENABLE_MICROSOFT_LOGIN && factory == Accounts.FACTORY_MICROSOFT) {
+            detailsPane = new MicrosoftAccountLoginPane(true);
             setActions();
         } else {
             detailsPane = new AccountDetailsInputPane(factory, btnAccept::fire);
@@ -302,7 +319,8 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
             for (String key : ALLOWED_LINKS) {
                 String value = links.get(key);
                 if (value != null) {
-                    Hyperlink link = new Hyperlink(i18n("account.injector.link." + key));
+                    JFXHyperlink link = new JFXHyperlink(i18n("account.injector.link." + key));
+                    FXUtils.installSlowTooltip(link, value);
                     link.setOnAction(e -> FXUtils.openLink(value));
                     result.add(link);
                 }
@@ -335,16 +353,14 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
 
             int rowIndex = 0;
 
-            // AIUEO: Disable warning about this being unofficial
-            // There isn't any sensitive data involved, this should be fine ~w~
-            // if (!IntegrityChecker.isOfficial() && !(factory instanceof OfflineAccountFactory)) {
-            //     HintPane hintPane = new HintPane(MessageDialogPane.MessageType.WARNING);
-            //     hintPane.setSegment(i18n("unofficial.hint"));
-            //     GridPane.setColumnSpan(hintPane, 2);
-            //     add(hintPane, 0, rowIndex);
-            //
-            //     rowIndex++;
-            // }
+            if (Metadata.ENABLE_MICROSOFT_LOGIN && !IntegrityChecker.isOfficial() && !(factory instanceof OfflineAccountFactory)) {
+                HintPane hintPane = new HintPane(MessageDialogPane.MessageType.WARNING);
+                hintPane.setSegment(i18n("unofficial.hint"));
+                GridPane.setColumnSpan(hintPane, 2);
+                add(hintPane, 0, rowIndex);
+
+                rowIndex++;
+            }
 
             if (factory instanceof BoundAuthlibInjectorAccountFactory) {
                 this.server = ((BoundAuthlibInjectorAccountFactory) factory).getServer();
@@ -354,9 +370,9 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
                 add(lblServers, 0, rowIndex);
 
                 cboServers = new JFXComboBox<>();
-                cboServers.setCellFactory(jfxListCellFactory(server -> new TwoLineListItem(server.getName(), null)));
+                cboServers.setCellFactory(jfxListCellFactory(server -> new TwoLineListItem(server.getName(), Metadata.ENABLE_MICROSOFT_LOGIN ? server.getUrl() : null)));
                 cboServers.setConverter(stringConverter(AuthlibInjectorServer::getName));
-                bindContent(cboServers.getItems(), config().getAuthlibInjectorServers());
+                bindContent(cboServers.getItems(), getAuthlibInjectorServers());
                 cboServers.getItems().addListener(onInvalidating(
                         () -> Platform.runLater( // the selection will not be updated as expected if we call it immediately
                                 cboServers.getSelectionModel()::selectFirst)));
@@ -515,7 +531,7 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
             if (factory instanceof AuthlibInjectorAccountFactory) {
                 return getAuthServer();
             } else if (factory instanceof OfflineAccountFactory) {
-                UUID uuid = txtUUID == null ? null : StringUtils.isBlank(txtUUID.getText()) ? null : UUIDTypeAdapter.fromString(txtUUID.getText());
+                UUID uuid = txtUUID == null ? null : StringUtils.isBlank(txtUUID.getText()) ? null : UUIDs.parse(txtUUID.getText());
                 return new OfflineAccountFactory.AdditionalData(uuid, null);
             } else {
                 return null;
@@ -636,7 +652,7 @@ public class CreateAccountPane extends JFXDialogLayout implements DialogAware {
             }
 
             try {
-                UUIDTypeAdapter.fromString(textField.getText());
+                UUIDs.parse(textField.getText());
                 hasErrors.set(false);
             } catch (IllegalArgumentException ignored) {
                 hasErrors.set(true);

@@ -28,6 +28,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
@@ -75,7 +76,7 @@ import java.util.concurrent.CancellationException;
 import java.util.function.Consumer;
 
 import static org.jackhuang.hmcl.download.RemoteVersion.Type.RELEASE;
-import static org.jackhuang.hmcl.setting.ConfigHolder.config;
+import static org.jackhuang.hmcl.setting.SettingsManager.state;
 import static org.jackhuang.hmcl.ui.FXUtils.SINE;
 import static org.jackhuang.hmcl.util.i18n.I18n.i18n;
 import static org.jackhuang.hmcl.util.logging.Logger.LOG;
@@ -87,20 +88,21 @@ public final class MainPage extends StackPane implements DecoratorPage {
 
     private final StringProperty currentGame = new SimpleStringProperty(this, "currentGame");
     private final BooleanProperty showUpdate = new SimpleBooleanProperty(this, "showUpdate");
+    private final BooleanProperty showUpdateDialog = new SimpleBooleanProperty(this, "showUpdateDialog");
     private final ObjectProperty<RemoteVersion> latestVersion = new SimpleObjectProperty<>(this, "latestVersion");
     private final ObservableList<Version> versions = FXCollections.observableArrayList();
     private Profile profile;
 
-    private TransitionPane announcementPane;
     private final StackPane updatePane;
     private final JFXButton menuButton;
+
+    private RemoteVersion lastShownVersion;
 
     {
         HBox titleNode = new HBox(8);
         titleNode.setPadding(new Insets(0, 0, 0, 2));
         titleNode.setAlignment(Pos.CENTER_LEFT);
 
-        // AIUEO: Icon and Title
         ImageView titleIcon = new ImageView(FXUtils.newBuiltinImage("/assets/img/icon-title.png"));
         Label titleLabel = new Label(Metadata.FULL_TITLE);
         if (I18n.isUpsideDown()) {
@@ -115,53 +117,6 @@ public final class MainPage extends StackPane implements DecoratorPage {
 
         setPadding(new Insets(20));
 
-        // AIUEO: THE WHITE MODAL THAT SHOWS UP INSIDE OF THE BODY ON THE RIGHT SIDE
-        // if (Metadata.isNightly() || (Metadata.isDev() && !Objects.equals(Metadata.VERSION, config().getShownTips().get(ANNOUNCEMENT)))) {
-        //     String title;
-        //     String content;
-        //     if (Metadata.isNightly()) {
-        //         title = i18n("update.channel.nightly.title");
-        //         content = i18n("update.channel.nightly.hint");
-        //     } else {
-        //         title = i18n("update.channel.dev.title");
-        //         content = i18n("update.channel.dev.hint");
-        //     }
-        //
-        //     VBox announcementCard = new VBox();
-        //
-        //     BorderPane titleBar = new BorderPane();
-        //     titleBar.getStyleClass().add("title");
-        //     titleBar.setLeft(new Label(title));
-        //
-        //     JFXButton btnHide = new JFXButton();
-        //     btnHide.setOnAction(e -> {
-        //         announcementPane.setContent(new StackPane(), ContainerAnimations.FADE);
-        //         if (Metadata.isDev()) {
-        //             config().getShownTips().put(ANNOUNCEMENT, Metadata.VERSION);
-        //         }
-        //     });
-        //     btnHide.getStyleClass().add("announcement-close-button");
-        //     btnHide.setGraphic(SVG.CLOSE.createIcon(20));
-        //     titleBar.setRight(btnHide);
-        //
-        //     TextFlow body = FXUtils.segmentToTextFlow(content, Controllers::onHyperlinkAction);
-        //     body.setLineSpacing(4);
-        //
-        //     announcementCard.getChildren().setAll(titleBar, body);
-        //     announcementCard.setSpacing(16);
-        //     announcementCard.getStyleClass().addAll("card", "announcement");
-        //
-        //     VBox announcementBox = new VBox(16);
-        //     announcementBox.setPadding(new Insets(15));
-        //     announcementBox.getChildren().add(announcementCard);
-        //
-        //     announcementPane = new TransitionPane();
-        //     announcementPane.setContent(announcementBox, ContainerAnimations.NONE);
-        //
-        //     StackPane.setMargin(announcementPane, new Insets(-15));
-        //     getChildren().add(announcementPane);
-        // }
-        //
         updatePane = new StackPane();
         updatePane.setVisible(false);
         updatePane.getStyleClass().add("bubble");
@@ -169,7 +124,9 @@ public final class MainPage extends StackPane implements DecoratorPage {
         FXUtils.setLimitHeight(updatePane, 55);
         StackPane.setAlignment(updatePane, Pos.TOP_RIGHT);
         FXUtils.onClicked(updatePane, this::onUpgrade);
-        FXUtils.onChange(showUpdateProperty(), this::showUpdate);
+        updatePane.setCursor(Cursor.HAND);
+        FXUtils.onChange(showUpdateProperty(), this::doAnimation);
+        FXUtils.onChange(showUpdateDialogProperty(), this::showUpdateDialog);
 
         {
             HBox hBox = new HBox();
@@ -182,7 +139,7 @@ public final class MainPage extends StackPane implements DecoratorPage {
                 prompt.setSubtitle(i18n("update.bubble.subtitle"));
                 prompt.setPickOnBounds(false);
                 prompt.titleProperty().bind(BindingMapping.of(latestVersionProperty()).map(latestVersion ->
-                        latestVersion == null ? "" : i18n("update.bubble.title", latestVersion.getVersion())));
+                        latestVersion == null ? "" : i18n("update.bubble.title", latestVersion.version())));
 
                 hBox.getChildren().setAll(SVG.UPDATE.createIcon(20), prompt);
             }
@@ -202,7 +159,7 @@ public final class MainPage extends StackPane implements DecoratorPage {
         FXUtils.onScroll(launchPane, versions, list -> {
             String currentId = getCurrentGame();
             return Lang.indexWhere(list, instance -> instance.getId().equals(currentId));
-        }, it -> profile.setSelectedVersion(it.getId()));
+        }, it -> Profiles.setSelectedInstance(profile, it.getId()));
 
         StackPane.setAlignment(launchPane, Pos.BOTTOM_RIGHT);
         {
@@ -273,15 +230,14 @@ public final class MainPage extends StackPane implements DecoratorPage {
 
     }
 
-    private void showUpdate(boolean show) {
-        doAnimation(show);
-
-        if (show && !config().isDisableAutoShowUpdateDialog()
-                && getLatestVersion() != null
-                && !Objects.equals(config().getPromptedVersion(), getLatestVersion().getVersion())) {
-            Controllers.dialog(new MessageDialogPane.Builder("", i18n("update.bubble.title", getLatestVersion().getVersion()), MessageDialogPane.MessageType.INFO)
+    private void showUpdateDialog(boolean show) {
+        if (show && getLatestVersion() != null && !Objects.equals(getLatestVersion(), lastShownVersion)
+                && !Objects.equals(state().getPromptedVersion(), getLatestVersion().version())
+        ) {
+            lastShownVersion = getLatestVersion();
+            Controllers.dialogLater(new MessageDialogPane.Builder("", i18n("update.bubble.title", getLatestVersion().version()), MessageDialogPane.MessageType.INFO)
                     .addAction(i18n("button.view"), () -> {
-                        config().setPromptedVersion(getLatestVersion().getVersion());
+                        state().setPromptedVersion(getLatestVersion().version());
                         onUpgrade();
                     })
                     .addCancel(null)
@@ -310,7 +266,7 @@ public final class MainPage extends StackPane implements DecoratorPage {
 
     private void launch() {
         Profile profile = Profiles.getSelectedProfile();
-        Versions.launch(profile, profile.getSelectedVersion());
+        Versions.launch(profile, Profiles.getSelectedInstance(profile));
     }
 
     private void launchNoGame() {
@@ -338,7 +294,7 @@ public final class MainPage extends StackPane implements DecoratorPage {
                 .whenComplete(any -> profile.getRepository().refreshVersions())
                 .whenComplete(Schedulers.javafx(), (result, exception) -> {
                     if (exception == null) {
-                        profile.setSelectedVersion(gameVersionHolder.value);
+                        Profiles.setSelectedInstance(profile, gameVersionHolder.value);
                         launch();
                     } else if (exception instanceof CancellationException) {
                         Controllers.showToast(i18n("message.cancelled"));
@@ -400,6 +356,18 @@ public final class MainPage extends StackPane implements DecoratorPage {
 
     public void setShowUpdate(boolean showUpdate) {
         this.showUpdate.set(showUpdate);
+    }
+
+    public boolean isShowUpdateDialog() {
+        return showUpdateDialog.get();
+    }
+
+    public BooleanProperty showUpdateDialogProperty() {
+        return showUpdateDialog;
+    }
+
+    public void setShowUpdateDialog(boolean showUpdateDialog) {
+        this.showUpdateDialog.set(showUpdateDialog);
     }
 
     public RemoteVersion getLatestVersion() {
