@@ -24,6 +24,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Parse version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION_ROOT="${TAG%.*}"
+          BUILD_NUMBER="${TAG##*.}"
+          echo "version_root=$VERSION_ROOT" >> "$GITHUB_OUTPUT"
+          echo "build_number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
+
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
@@ -40,6 +49,8 @@ jobs:
         run: xvfb-run ./gradlew build --no-daemon --parallel
         env:
           HMCL_OFFICIAL: "true"
+          VERSION_ROOT: ${{ steps.version.outputs.version_root }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
           ENABLE_MICROSOFT_LOGIN: ${{ matrix.enable_ms_login }}
           MICROSOFT_AUTH_ID: ${{ secrets.MICROSOFT_AUTH_ID }}
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
