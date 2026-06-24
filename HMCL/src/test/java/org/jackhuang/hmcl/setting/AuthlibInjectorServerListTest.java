@@ -110,7 +110,7 @@ public final class AuthlibInjectorServerListTest {
                 {
                   "authlibInjectorServers": [
                     {
-                      "url": "https://littleskin.cn/api/yggdrasil/"
+                      "url": "https://drasl.ntust.camp/authlib-injector/"
                     }
                   ],
                   "addedLittleSkin": false
