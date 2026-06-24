@@ -37,8 +37,8 @@ import static org.jackhuang.hmcl.util.logging.Logger.LOG;
 
 public class OAuth {
     public static final OAuth MICROSOFT = new OAuth(
-            "https://login.live.com/oauth20_authorize.srf",
-            "https://login.live.com/oauth20_token.srf",
+            "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
+            "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
             "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode",
             "https://login.microsoftonline.com/consumers/oauth2/v2.0/token");
 
@@ -65,6 +65,7 @@ public class OAuth {
                     throw new UnsupportedOperationException("grant flow " + grantFlow);
             }
         } catch (IOException e) {
+            LOG.warning("OAuth failed with IOException", e);
             throw new ServerDisconnectException(e);
         } catch (InterruptedException e) {
             throw new NoSelectedCharacterException();
@@ -72,9 +73,11 @@ public class OAuth {
             if (e.getCause() instanceof InterruptedException) {
                 throw new NoSelectedCharacterException();
             } else {
+                LOG.warning("OAuth failed with ExecutionException", e);
                 throw new ServerDisconnectException(e);
             }
         } catch (JsonParseException e) {
+            LOG.warning("OAuth failed with JsonParseException", e);
             throw new ServerResponseMalformedException(e);
         }
     }

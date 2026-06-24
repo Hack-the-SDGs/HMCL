@@ -76,11 +76,15 @@ public class MicrosoftService {
 
     public MicrosoftSession authenticate(OAuth.GrantFlow flow) throws AuthenticationException {
         try {
+            LOG.info("Starting Microsoft OAuth authentication");
             OAuth.Result result = OAuth.MICROSOFT.authenticate(flow, new OAuth.Options(SCOPE, callback));
+            LOG.info("OAuth token exchange succeeded, authenticating with Xbox Live");
             return authenticateViaLiveAccessToken(result.getAccessToken(), result.getRefreshToken());
         } catch (IOException e) {
+            LOG.warning("Microsoft auth failed with IOException", e);
             throw new ServerDisconnectException(e);
         } catch (JsonParseException e) {
+            LOG.warning("Microsoft auth failed with JsonParseException", e);
             throw new ServerResponseMalformedException(e);
         }
     }
