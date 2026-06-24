@@ -37,7 +37,7 @@ jobs:
           cache-cleanup: never
 
       - name: Build with Gradle
-        run: ./gradlew build --no-daemon --parallel
+        run: xvfb-run ./gradlew build --no-daemon --parallel
         env:
           HMCL_OFFICIAL: "true"
           ENABLE_MICROSOFT_LOGIN: ${{ matrix.enable_ms_login }}

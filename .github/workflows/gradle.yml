@@ -26,7 +26,7 @@ jobs:
       with:
         cache-cleanup: never
     - name: Build with Gradle
-      run: ./gradlew build --no-daemon --parallel
+      run: xvfb-run ./gradlew build --no-daemon --parallel
       env:
         HMCL_OFFICIAL: "true"
         MICROSOFT_AUTH_ID: ${{ secrets.MICROSOFT_AUTH_ID }}
