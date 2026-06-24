@@ -45,6 +45,7 @@ jobs:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
 
       - name: Rename artifacts
+        if: matrix.suffix != ''
         run: |
           set -euo pipefail
           cd HMCL/build/libs
@@ -55,7 +56,6 @@ jobs:
             EXT="${f##*.}"
             BASE="${f%.*}"
             mv "$f" "${BASE}${SUFFIX}.${EXT}"
-            # Also rename hash files
             for hash in sha1 sha256 sha512; do
               [ -f "$f.$hash" ] && mv "$f.$hash" "${BASE}${SUFFIX}.${EXT}.$hash"
             done
